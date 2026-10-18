@@ -7,7 +7,7 @@ import { forwardRef, useEffect } from "react";
 import { Link, useRouter, type LinkComponentProps } from "@tanstack/react-router";
 import { useGlimm } from "glimm/react";
 import type { SweepHandle, SweepOptions } from "glimm/react";
-import { interceptLinks } from "./intercept.js";
+import { defaultShouldIntercept, interceptLinks } from "./intercept.js";
 import type { InterceptLinksOptions } from "./intercept.js";
 
 export { GlimmProvider, useGlimm } from "glimm/react";
@@ -36,7 +36,7 @@ export type TransitionLinkProps = LinkComponentProps<"a"> & {
  * modifier clicks, `target="_blank"`, external URLs, and same-page hashes.
  *
  * ```tsx
- * import { TransitionLink } from 'better-glimm/tanstack'
+ * import { TransitionLink } from 'glimm-adapters/tanstack'
  * <TransitionLink to="/about" sweep={{ palette: 'berry', direction: 'rtl' }}>
  *   About
  * </TransitionLink>
@@ -54,25 +54,15 @@ export const TransitionLink = forwardRef<HTMLAnchorElement, TransitionLinkProps>
       onClick?.(e);
       if (e.defaultPrevented) return;
       if (noTransition) return;
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const anchor = e.currentTarget;
-      if (anchor.target && anchor.target !== "_self") return;
-      if (anchor.hasAttribute("download")) return;
-      if (anchor.dataset.glimmSkip !== undefined) return;
+      if (!defaultShouldIntercept(e.nativeEvent, anchor)) return;
+      e.preventDefault();
       let url: URL;
       try {
         url = new URL(anchor.href, window.location.href);
       } catch {
         return;
       }
-      if (url.origin !== window.location.origin) return;
-      if (
-        url.pathname === window.location.pathname &&
-        url.search === window.location.search &&
-        url.hash
-      )
-        return;
-      e.preventDefault();
       const { to, params, search, hash, replace } = linkProps as {
         to?: string;
         params?: Record<string, string>;
@@ -138,8 +128,59 @@ export type TransitionRouter = {
 };
 
 /**
+ * The parts of the TanStack router this adapter uses. Structural, so the
+ * adapter does not need the router's full generic type at the call site.
+ */
+export type TanStackRouterLike = {
+  navigate: (options: { to: string; replace?: boolean }) => Promise<void>;
+  history: { back: () => void; forward: () => void };
+  subscribe: (event: "onRendered", listener: () => void) => () => void;
+};
+
+/**
+ * Resolve after the router has rendered the location a history call moved to.
+ * `history.back()`/`forward()` return void, so the sweep cannot await them
+ * directly and would reveal before the new route paints.
+ */
+function afterRender(
+  router: Pick<TanStackRouterLike, "subscribe">,
+  run: () => void,
+): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      resolve();
+    };
+    const unsubscribe = router.subscribe("onRendered", finish);
+    run();
+  });
+}
+
+/**
+ * Router-shaped commit functions, separate from React so the timing can be
+ * tested without mounting a router.
+ */
+export function createTanStackCommit(router: TanStackRouterLike) {
+  const navigate = (href: string, replace?: boolean) =>
+    replace === undefined ? router.navigate({ to: href }) : router.navigate({ to: href, replace });
+  return {
+    push: (href: string) => navigate(href),
+    replace: (href: string) => navigate(href, true),
+    back: () => afterRender(router, () => router.history.back()),
+    forward: () => afterRender(router, () => router.history.forward()),
+  };
+}
+
+/**
  * Drop-in programmatic navigation for TanStack Router that plays a glimm
  * sweep around each call. For declarative links prefer `<TransitionLink>`.
+ *
+ * `router.navigate` returns a promise that resolves after the route has
+ * loaded. `router.history.push` returns void, which lets the sweep reveal
+ * before the new route renders, so it is not used here.
  *
  * ```tsx
  * const router = useTransitionRouter()
@@ -150,11 +191,12 @@ export type TransitionRouter = {
 export function useTransitionRouter(): TransitionRouter {
   const router = useRouter();
   const { sweep } = useGlimm();
+  const commit = createTanStackCommit(router as unknown as TanStackRouterLike);
   return {
-    push: (href, options) => sweep(() => router.history.push(href), options),
-    replace: (href, options) => sweep(() => router.history.replace(href), options),
-    back: (options) => sweep(() => router.history.back(), options),
-    forward: (options) => sweep(() => router.history.forward(), options),
+    push: (href, options) => sweep(() => commit.push(href), options),
+    replace: (href, options) => sweep(() => commit.replace(href), options),
+    back: (options) => sweep(() => commit.back(), options),
+    forward: (options) => sweep(() => commit.forward(), options),
   };
 }
 
@@ -165,8 +207,8 @@ export function useTransitionRouter(): TransitionRouter {
  *
  * ```tsx
  * // __root.tsx
- * import { GlimmProvider } from 'better-glimm/tanstack'
- * import { InterceptLinks } from 'better-glimm/tanstack'
+ * import { GlimmProvider } from 'glimm-adapters/tanstack'
+ * import { InterceptLinks } from 'glimm-adapters/tanstack'
  * export function Root() {
  *   return (
  *     <GlimmProvider palette="prism">
@@ -181,7 +223,9 @@ export function InterceptLinks(props: InterceptLinksOptions): null {
   const router = useRouter();
   const { sweep } = useGlimm();
   useEffect(() => {
-    return interceptLinks(sweep, (href) => router.history.push(href), props);
+    // `navigate` returns a promise that resolves after the route loads, so
+    // glimm's commit holds the curtain until the new page has rendered.
+    return interceptLinks(sweep, (href) => router.navigate({ to: href }), props);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, sweep, props.sweep, props.shouldIntercept]);
   return null;

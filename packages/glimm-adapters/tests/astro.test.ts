@@ -23,4 +23,23 @@ describe("setupGlimmAstro sweep", () => {
     expect(second.sweep).toBe(first.sweep);
     first.destroy();
   });
+
+  it("rebuilds when a function-valued default changes identity", () => {
+    document.body.innerHTML = `<canvas id="glimm-canvas"></canvas>`;
+    const canvas = document.getElementById("glimm-canvas") as HTMLCanvasElement;
+    const first = setupGlimmAstro({ canvas, defaults: { easing: (p) => p } });
+    const second = setupGlimmAstro({ canvas, defaults: { easing: (p) => p * p } });
+    expect(second.navigate).not.toBe(first.navigate);
+    second.destroy();
+  });
+
+  it("reuses the slot when the same easing function is passed again", () => {
+    document.body.innerHTML = `<canvas id="glimm-canvas"></canvas>`;
+    const canvas = document.getElementById("glimm-canvas") as HTMLCanvasElement;
+    const easing = (p: number) => p;
+    const first = setupGlimmAstro({ canvas, defaults: { easing } });
+    const second = setupGlimmAstro({ canvas, defaults: { easing } });
+    expect(second.navigate).toBe(first.navigate);
+    first.destroy();
+  });
 });

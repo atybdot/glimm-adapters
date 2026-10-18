@@ -42,28 +42,19 @@ export type {
 
 export { interceptLinks, defaultShouldIntercept } from "./intercept.js";
 
-export type { InterceptLinksOptions, NavigateFn, Href, SweepFn } from "./intercept.js";
+export type { InterceptLinksOptions, NavigateFn, SweepFn } from "./intercept.js";
 
-export { createCurtain, ensureCurtainHost, nextPaint, playCoveredSweep } from "./covered.js";
+export { createCurtain, playCoveredSweep, viewTransitionSettled } from "./covered.js";
 
 export type { CommitFn, CoveredSweepHandle, Curtain } from "./covered.js";
 
-export {
-  createRunnerState,
-  createVanillaController,
-  interruptActive,
-  noopSweepHandle,
-  prefersReducedMotion,
-  resolveInstantFallback,
-  runVanillaSweep,
-  sweepForIntercept,
-  trackHandle,
-} from "./vanilla.js";
+export { setupGlimmVanilla } from "./vanilla.js";
 
 export type {
-  ActiveHandle,
   ReducedMotionMode,
-  RunnerState,
-  RunSweepArgs,
+  SweepMode,
   VanillaBaseSetup,
+  VanillaNavigate,
+  VanillaSweepApi,
+  VanillaSweepSetup,
 } from "./vanilla.js";

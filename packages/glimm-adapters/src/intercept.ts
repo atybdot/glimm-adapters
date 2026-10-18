@@ -3,8 +3,6 @@ import type { SweepHandle, SweepOptions } from "glimm";
 /** Plays the band, awaits `navigate` at the midpoint. Mirrors `glimm/react`. */
 export type SweepFn = (navigate: () => void | Promise<void>, options?: SweepOptions) => SweepHandle;
 
-export type Href = string;
-
 /** Callback that performs the actual route change. Awaited at sweep midpoint. */
 export type NavigateFn = (href: string) => void | Promise<void>;
 
@@ -55,14 +53,18 @@ export const defaultShouldIntercept = (e: MouseEvent, a: HTMLAnchorElement): boo
 };
 
 /**
- * Vanilla, framework-agnostic: installs a delegated click listener on the
- * document that runs every same-origin link click through a sweep.
+ * Vanilla, framework-agnostic: installs a delegated capture-phase click
+ * listener on the document that runs every same-origin link click through a
+ * sweep. Capture phase matters: routers such as TanStack, vue-router, Astro
+ * and SvelteKit call `preventDefault()` from their own click handlers. If the
+ * interceptor ran in the bubble phase, those handlers would win the race and
+ * the sweep would never start.
  * Returns a cleanup function that removes the listener.
  *
  * Pair with a navigate callback that performs the actual route change:
  *
  * ```ts
- * import { interceptLinks } from 'better-glimm'
+ * import { interceptLinks } from 'glimm-adapters'
  * const { sweep } = useGlimm()
  * useEffect(() => interceptLinks(sweep, (href) => router.push(href)), [sweep])
  * ```
@@ -92,14 +94,27 @@ export function interceptLinks(
     }
     e.preventDefault();
     try {
-      const handle = sweep(() => navigate(href), opts.sweep);
-      // A null-ish return means instant fallback already navigated.
-      void handle;
+      sweep(() => navigate(href), opts.sweep);
     } catch {
       // WebGL/context loss must never swallow the click.
-      void navigate(href);
+      runNavigate(navigate, href);
     }
   };
-  document.addEventListener("click", onClick);
-  return () => document.removeEventListener("click", onClick);
+  // Capture phase: run before router handlers that call preventDefault().
+  document.addEventListener("click", onClick, true);
+  return () => document.removeEventListener("click", onClick, true);
+}
+
+/** Fire-and-forget navigation that surfaces async failures instead of dropping them. */
+function runNavigate(navigate: NavigateFn, href: string): void {
+  try {
+    const result = navigate(href);
+    if (result && typeof (result as Promise<void>).then === "function") {
+      void (result as Promise<void>).catch((error: unknown) => {
+        console.error("[glimm-adapters] navigation failed:", error);
+      });
+    }
+  } catch (error) {
+    console.error("[glimm-adapters] navigation failed:", error);
+  }
 }

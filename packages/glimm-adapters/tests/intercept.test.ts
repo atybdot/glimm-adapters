@@ -68,6 +68,31 @@ describe("interceptLinks", () => {
     expect(sweep).toHaveBeenCalledTimes(1);
   });
 
+  it("runs in the capture phase, ahead of router bubble handlers", () => {
+    document.body.innerHTML = `<a href="/about">About</a>`;
+    const anchor = document.querySelector("a")!;
+    // A router-style handler on the anchor calls preventDefault in the
+    // bubble phase, after the document capture listener.
+    const routerHandler = (e: MouseEvent) => e.preventDefault();
+    anchor.addEventListener("click", routerHandler);
+
+    const sweep = vi.fn<() => { midpoint: Promise<void>; done: Promise<void>; cancel: () => void }>(
+      () => ({
+        midpoint: Promise.resolve(),
+        done: Promise.resolve(),
+        cancel: () => {},
+      }),
+    );
+    const navigate = vi.fn<(href: string) => void>();
+    const cleanup = interceptLinks(sweep as never, navigate);
+
+    anchor.dispatchEvent(click(anchor));
+    expect(sweep).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    anchor.removeEventListener("click", routerHandler);
+  });
+
   it("applies per-interceptor sweep overrides", () => {
     document.body.innerHTML = `<a href="/x">X</a>`;
     const sweep = vi.fn<

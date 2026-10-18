@@ -22,6 +22,9 @@ import type { Direction, ShaderController, SweepHandle, SweepOptions } from "gli
 
 export type CommitFn = (signal: AbortSignal) => void | Promise<void>;
 
+/** Both the covered sweep and the plain fallback use the same budget. */
+export const COMMIT_TIMEOUT_MS = 8000;
+
 /** Covered sweep handle: SweepHandle plus curtain-preserving interrupt. */
 export type CoveredSweepHandle = SweepHandle & {
   /** Cancel but keep the curtain so the next sweep continues from covered. */
@@ -38,6 +41,10 @@ export type Curtain = {
 };
 
 function surfaceColor(host: HTMLElement): string {
+  // Solid backgrounds only. A page whose background is a gradient or an image
+  // reports `backgroundColor: transparent`, so the walk falls through to the
+  // next solid ancestor and then to the document fallback. Sampling a gradient
+  // needs the element's box, which the curtain does not have here.
   for (let node: HTMLElement | null = host.parentElement; node; node = node.parentElement) {
     const color = getComputedStyle(node).backgroundColor;
     if (!color || color === "transparent") continue;
@@ -122,6 +129,35 @@ export function createCurtain(host: HTMLElement): Curtain {
   };
 }
 
+/**
+ * Resolves once the browser has finished any View Transition animation, or
+ * after `timeoutMs`.
+ *
+ * `navigate()` in Astro, TanStack and the browser's own cross-document router
+ * resolves when the DOM has been updated, not when the crossfade has finished.
+ * Revealing two frames later therefore plays the first half of the sweep under
+ * the native animation, where it is invisible. Waiting for the
+ * `::view-transition-*` animations closes that gap without needing the caller
+ * to disable the default animation.
+ */
+export function viewTransitionSettled(timeoutMs = 1000): Promise<void> {
+  if (typeof document === "undefined" || typeof document.getAnimations !== "function") {
+    return Promise.resolve();
+  }
+
+  const running = document.getAnimations().filter((animation) => {
+    const effect = animation.effect as KeyframeEffect | null;
+    const pseudo = effect?.pseudoElement;
+    return typeof pseudo === "string" && pseudo.startsWith("::view-transition");
+  });
+  if (running.length === 0) return Promise.resolve();
+
+  return Promise.race([
+    Promise.allSettled(running.map((animation) => animation.finished)).then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 /** Two rAFs — the new page has painted underneath when this resolves. */
 export function nextPaint(signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
@@ -171,42 +207,111 @@ function waitForWork(work: void | Promise<void>, signal: AbortSignal): Promise<v
   });
 }
 
+/** Resolve after `work`, or after `ms` so a hung commit cannot freeze the UI. */
+export function withTimeout(work: void | Promise<void>, ms: number, label: string): Promise<void> {
+  if (!work || typeof (work as Promise<void>).then !== "function") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      console.warn(`[glimm-adapters] ${label} timed out; releasing the curtain`);
+      resolve();
+    }, ms);
+    void Promise.resolve(work).then(finish, (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    });
+  });
+}
+
+type HostRecord = {
+  host: HTMLDivElement;
+  curtain: Curtain;
+  prev: {
+    position: string;
+    inset: string;
+    width: string;
+    height: string;
+  };
+  restorePosition: () => void;
+};
+
+const hosts = new WeakMap<HTMLCanvasElement, HostRecord>();
+
 /**
  * Moves `canvas` into a fixed overlay host that also owns the curtain,
  * mirroring glimm/react's provider host (canvas + curtain stacked).
- * Returns the curtain; destroy the curtain and host via the cleanup.
+ *
+ * A host is reused when the canvas is re-hosted. Astro detaches the host on
+ * every swap while `transition:persist` keeps the canvas itself; reusing the
+ * same host and curtain keeps an in-flight covered sweep attached instead of
+ * animating a detached copy. The cleanup re-parents the canvas to wherever
+ * it is now, not to the location it had when the host was first created.
  */
 export function ensureCurtainHost(canvas: HTMLCanvasElement): {
   host: HTMLDivElement;
   curtain: Curtain;
   restore: () => void;
 } {
-  const host = document.createElement("div");
-  host.setAttribute("aria-hidden", "true");
-  host.dataset.glimmHost = "";
-  const canvasZ = Number.parseInt(getComputedStyle(canvas).zIndex, 10);
-  Object.assign(host.style, {
-    position: "fixed",
-    inset: "0",
-    pointerEvents: "none",
-    zIndex: String(Number.isFinite(canvasZ) ? canvasZ : 9999),
-  } satisfies Partial<CSSStyleDeclaration>);
+  let record = hosts.get(canvas);
+  if (!record) {
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.dataset.glimmHost = "";
+    const canvasZ = Number.parseInt(getComputedStyle(canvas).zIndex, 10);
+    Object.assign(host.style, {
+      position: "fixed",
+      inset: "0",
+      pointerEvents: "none",
+      // z-index: 0 (or auto) would put the curtain below sticky headers.
+      zIndex: String(Number.isFinite(canvasZ) && canvasZ > 0 ? canvasZ : 9999),
+    } satisfies Partial<CSSStyleDeclaration>);
+    const prev = {
+      position: canvas.style.position,
+      inset: canvas.style.inset,
+      width: canvas.style.width,
+      height: canvas.style.height,
+    };
+    record = {
+      host,
+      curtain: createCurtain(host),
+      prev,
+      restorePosition: () => {
+        canvas.style.position = prev.position;
+        canvas.style.inset = prev.inset;
+        canvas.style.width = prev.width;
+        canvas.style.height = prev.height;
+      },
+    };
+    hosts.set(canvas, record);
+    Object.assign(canvas.style, {
+      position: "absolute",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+    } satisfies Partial<CSSStyleDeclaration>);
+  }
+
+  const { host, curtain } = record;
   const parent = canvas.parentElement;
   const next = canvas.nextSibling;
-  if (parent) parent.insertBefore(host, canvas);
-  else document.body.appendChild(host);
-  const prevPosition = canvas.style.position;
-  const prevInset = canvas.style.inset;
-  const prevWidth = canvas.style.width;
-  const prevHeight = canvas.style.height;
-  Object.assign(canvas.style, {
-    position: "absolute",
-    inset: "0",
-    width: "100%",
-    height: "100%",
-  } satisfies Partial<CSSStyleDeclaration>);
-  host.appendChild(canvas);
-  const curtain = createCurtain(host);
+  if (parent !== host) {
+    if (parent) parent.insertBefore(host, canvas);
+    else document.body.appendChild(host);
+    host.appendChild(canvas);
+  }
+
   let restored = false;
   return {
     host,
@@ -214,13 +319,15 @@ export function ensureCurtainHost(canvas: HTMLCanvasElement): {
     restore: () => {
       if (restored) return;
       restored = true;
+      hosts.delete(canvas);
       curtain.destroy();
-      if (canvas.parentElement === host && parent) parent.insertBefore(canvas, next);
-      else if (canvas.parentElement === host) document.body.appendChild(canvas);
-      canvas.style.position = prevPosition;
-      canvas.style.inset = prevInset;
-      canvas.style.width = prevWidth;
-      canvas.style.height = prevHeight;
+      if (canvas.parentElement === host) {
+        // `parent`/`next` are the positions captured on this hosting pass.
+        if (parent && next?.parentNode === parent) parent.insertBefore(canvas, next);
+        else if (parent) parent.appendChild(canvas);
+        else document.body.appendChild(canvas);
+      }
+      record.restorePosition();
       host.remove();
     },
   };
@@ -296,17 +403,22 @@ export function playCoveredSweep(
         let timer: ReturnType<typeof setTimeout> | undefined;
         try {
           await Promise.race([
-            waitForWork(commit(abort.signal), abort.signal),
+            // Wrap the call so a synchronous throw becomes a rejection
+            // that `waitForWork` can surface.
+            waitForWork(
+              Promise.resolve().then(() => commit(abort.signal)),
+              abort.signal,
+            ),
             new Promise<void>((resolve) => {
               timer = setTimeout(() => {
-                console.warn("[better-glimm] content commit timed out; releasing the curtain");
+                console.warn("[glimm-adapters] content commit timed out; releasing the curtain");
                 abort.abort();
                 resolve();
-              }, 8000);
+              }, COMMIT_TIMEOUT_MS);
             }),
           ]);
         } catch (error) {
-          console.error("[better-glimm] content commit failed:", error);
+          console.error("[glimm-adapters] content commit failed:", error);
         } finally {
           clearTimeout(timer);
         }
@@ -316,10 +428,19 @@ export function playCoveredSweep(
     });
     await active.done;
     if (cancelled) return;
+    let revealed = false;
     const revealCtrl: ShaderController = {
       ...ctrl,
       getProgress: () => 0,
       setProgress: (p: number) => {
+        // After the midpoint, glimm resets progress to 0 before resolving
+        // `done`. Painting that reset into the curtain would flip it from
+        // idle back to reveal for a frame. Keep the shader in sync, leave the
+        // curtain hidden.
+        if (revealed) {
+          ctrl.setProgress(p);
+          return;
+        }
         curtain.update(p, "reveal");
         ctrl.setProgress(p);
       },
@@ -327,8 +448,15 @@ export function playCoveredSweep(
     active = playSweep(revealCtrl, {
       ...opts,
       sweepMs: duration * (1 - split),
+      // The reveal is done at progress 1. A default outro would keep the
+      // engine's rAF loop running for another ~220 ms, delaying `done` and
+      // holding the last frame for no visual reason.
+      outroMs: 0,
       midpoint: 1,
-      onMidpoint: () => curtain.hide(),
+      onMidpoint: () => {
+        revealed = true;
+        curtain.hide();
+      },
       onComplete: undefined,
     });
     await active.done;
@@ -338,10 +466,11 @@ export function playCoveredSweep(
     }
   })()
     .catch((error: unknown) => {
-      console.error("[better-glimm] covered sweep failed:", error);
+      console.error("[glimm-adapters] covered sweep failed:", error);
       if (!cancelled) {
         curtain.hide();
         ctrl.setAlpha(0);
+        ctrl.setProgress(0);
       }
     })
     .finally(() => {

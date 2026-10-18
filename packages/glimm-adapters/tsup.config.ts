@@ -8,6 +8,7 @@ export default defineConfig({
     svelte: "src/svelte.ts",
     vue: "src/vue.ts",
     astro: "src/astro.ts",
+    vanilla: "src/vanilla.ts",
   },
   format: ["esm"],
   dts: true,

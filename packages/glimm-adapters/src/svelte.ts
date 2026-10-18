@@ -2,9 +2,9 @@
 //
 // SvelteKit has no `<GlimmProvider>` — the vanilla core owns the canvas and
 // the sweep state machine. This entry provides the thin shell: run every
-// same-origin click through a covered sweep (cover → hold until SvelteKit
-// has committed + painted → reveal over the NEW page) and call SvelteKit's
-// `goto` at the hold.
+// same-origin click through one plain sweep by default, commit the route at
+// its midpoint, and let `goto` finish before the band leaves. Pass
+// `mode: "covered"` when a route can be slow enough to need a curtain.
 //
 // No static import of `$app/navigation` here so this entry stays importable
 // outside SvelteKit (and SSR-safe: all helpers no-op without `window`).
@@ -12,20 +12,14 @@
 import type { Palette, PaletteName, ShaderController, SweepHandle, SweepOptions } from "glimm";
 import { interceptLinks, defaultShouldIntercept } from "./intercept.js";
 import type { InterceptLinksOptions } from "./intercept.js";
-import {
-  createRunnerState,
-  createVanillaController,
-  ensureHost,
-  interruptActive,
-  resolveInstantFallback,
-  runVanillaSweep,
-  sweepForIntercept,
-} from "./vanilla.js";
+import { createCanvasSlots, setupKey } from "./setup-key.js";
+import { createVanillaRuntime, sweepForIntercept } from "./vanilla.js";
 import type { VanillaBaseSetup } from "./vanilla.js";
 
 export { defaultShouldIntercept, interceptLinks };
 export { createShader, playSweep } from "glimm";
 export type { Palette, PaletteName, ShaderController, SweepOptions, InterceptLinksOptions };
+export type { SweepMode } from "./vanilla.js";
 
 /** SvelteKit's `goto` — passed in by the caller, never imported here. */
 export type SvelteGoto = (href: string) => void | Promise<void>;
@@ -44,6 +38,8 @@ export type SvelteSweepApi = {
   controller: ShaderController | null;
 };
 
+const slots = createCanvasSlots<SvelteSweepApi>();
+
 /**
  * Wire glimm into a SvelteKit app. Call once in `onMount` (client-only):
  *
@@ -51,7 +47,7 @@ export type SvelteSweepApi = {
  * <script lang="ts">
  *   import { onMount } from 'svelte'
  *   import { goto } from '$app/navigation'
- *   import { setupGlimm } from 'better-glimm/svelte'
+ *   import { setupGlimm } from 'glimm-adapters/svelte'
  *
  *   let canvas: HTMLCanvasElement
  *   let glimm: ReturnType<typeof setupGlimm>
@@ -73,45 +69,36 @@ export function setupGlimm({
   defaults = {},
   intercept = {},
   reducedMotion = "instant",
+  mode = "reveal",
   onController,
 }: SvelteSweepSetup): SvelteSweepApi {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return { navigate: () => null, destroy: () => {}, controller: null };
   }
-  const instantFallback = resolveInstantFallback(reducedMotion);
-  const controller = createVanillaController(canvas, defaults, onController);
-  const hosted = ensureHost(canvas, controller);
-  const state = createRunnerState();
 
-  const run = (
-    commit: (signal: AbortSignal) => void | Promise<void>,
-    options?: SweepOptions,
-  ): SweepHandle | null =>
-    runVanillaSweep({
-      state,
-      controller,
-      curtain: hosted?.curtain ?? null,
-      defaults,
-      instantFallback,
-      commit,
-      options,
-    });
+  // A layout mount can run more than once (HMR, a remounted layout). Reuse
+  // the live instance instead of creating a second shader and click listener.
+  const key = setupKey({ defaults, reducedMotion, navigate: goto, extra: mode });
+  const existing = slots.get(canvas);
+  if (existing) {
+    if (existing.setupKey === key && canvas.isConnected) return existing.api;
+    existing.api.destroy();
+  }
 
-  const navigate = (href: string, options?: SweepOptions) => run(() => goto(href), options);
+  const runtime = createVanillaRuntime(canvas, defaults, reducedMotion, mode, onController);
+  const navigate = (href: string, options?: SweepOptions) => runtime.run(() => goto(href), options);
 
-  const cleanup = interceptLinks(
-    sweepForIntercept(state, controller, hosted?.curtain ?? null, defaults, instantFallback),
-    (href) => goto(href),
-    intercept,
-  );
+  const cleanup = interceptLinks(sweepForIntercept(runtime), (href) => goto(href), intercept);
 
-  return {
+  const api: SvelteSweepApi = {
     navigate,
     destroy: () => {
       cleanup();
-      interruptActive(state);
-      hosted?.restore();
+      runtime.destroy();
+      slots.delete(canvas, api);
     },
-    controller,
+    controller: runtime.controller,
   };
+  slots.set(canvas, { api, setupKey: key });
+  return api;
 }

@@ -1,28 +1,23 @@
 // Vue / Nuxt adapter for glimm.
 //
 // Same shape as the Svelte entry: vanilla core owns the canvas, this file is
-// the thin shell that runs clicks through a covered sweep (cover → hold
-// until vue-router has committed + painted → reveal over the NEW page) and
-// calls `router.push` (vue-router) at the hold. The router is passed in —
-// never imported — so this entry works with vue-router and Nuxt alike.
+// the thin shell that runs clicks through one plain sweep by default, calls
+// `router.push` at the midpoint, and waits for the new view to paint before
+// the band leaves. Pass `mode: "covered"` for a slow route that needs a
+// curtain. The router is passed in, never imported, so this entry works with
+// vue-router and Nuxt alike.
 
 import type { Palette, PaletteName, ShaderController, SweepHandle, SweepOptions } from "glimm";
 import { interceptLinks, defaultShouldIntercept } from "./intercept.js";
 import type { InterceptLinksOptions } from "./intercept.js";
-import {
-  createRunnerState,
-  createVanillaController,
-  ensureHost,
-  interruptActive,
-  resolveInstantFallback,
-  runVanillaSweep,
-  sweepForIntercept,
-} from "./vanilla.js";
+import { createCanvasSlots, setupKey } from "./setup-key.js";
+import { createVanillaRuntime, sweepForIntercept } from "./vanilla.js";
 import type { VanillaBaseSetup } from "./vanilla.js";
 
 export { defaultShouldIntercept, interceptLinks };
 export { createShader, playSweep } from "glimm";
 export type { Palette, PaletteName, ShaderController, SweepOptions, InterceptLinksOptions };
+export type { SweepMode } from "./vanilla.js";
 
 /** Minimal surface of vue-router's router used here. */
 export type VueRouterLike = {
@@ -42,13 +37,15 @@ export type VueSweepApi = {
   controller: ShaderController | null;
 };
 
+const slots = createCanvasSlots<VueSweepApi>();
+
 /**
  * Wire glimm into a Vue app. Call once on mount (client-only):
  *
  * ```ts
  * // App.vue
  * import { useRouter } from 'vue-router'
- * import { setupGlimmVue } from 'better-glimm/vue'
+ * import { setupGlimmVue } from 'glimm-adapters/vue'
  *
  * const router = useRouter()
  * onMounted(() => {
@@ -63,46 +60,42 @@ export function setupGlimmVue({
   defaults = {},
   intercept = {},
   reducedMotion = "instant",
+  mode = "reveal",
   onController,
 }: VueSweepSetup): VueSweepApi {
   if (typeof window === "undefined" || typeof document === "undefined") {
     const nil = () => null;
     return { push: nil, replace: nil, destroy: () => {}, controller: null };
   }
-  const instantFallback = resolveInstantFallback(reducedMotion);
-  const controller = createVanillaController(canvas, defaults, onController);
-  const hosted = ensureHost(canvas, controller);
-  const state = createRunnerState();
 
-  const run = (
-    go: (signal: AbortSignal) => void | Promise<void>,
-    options?: SweepOptions,
-  ): SweepHandle | null =>
-    runVanillaSweep({
-      state,
-      controller,
-      curtain: hosted?.curtain ?? null,
-      defaults,
-      instantFallback,
-      commit: go,
-      options,
-    });
+  // Nuxt plugins and HMR can run setup twice. Reuse the live instance instead
+  // of creating a second shader and click listener.
+  const key = setupKey({ defaults, reducedMotion, navigate: router, extra: mode });
+  const existing = slots.get(canvas);
+  if (existing) {
+    if (existing.setupKey === key && canvas.isConnected) return existing.api;
+    existing.api.destroy();
+  }
+
+  const runtime = createVanillaRuntime(canvas, defaults, reducedMotion, mode, onController);
 
   const cleanup = interceptLinks(
-    sweepForIntercept(state, controller, hosted?.curtain ?? null, defaults, instantFallback),
+    sweepForIntercept(runtime),
     (href) => router.push(href),
     intercept,
   );
 
-  return {
-    push: (href, options) => run(() => router.push(href), options),
+  const api: VueSweepApi = {
+    push: (href, options) => runtime.run(() => router.push(href), options),
     replace: (href, options) =>
-      run(() => (router.replace ? router.replace(href) : router.push(href)), options),
+      runtime.run(() => (router.replace ? router.replace(href) : router.push(href)), options),
     destroy: () => {
       cleanup();
-      interruptActive(state);
-      hosted?.restore();
+      runtime.destroy();
+      slots.delete(canvas, api);
     },
-    controller,
+    controller: runtime.controller,
   };
+  slots.set(canvas, { api, setupKey: key });
+  return api;
 }
