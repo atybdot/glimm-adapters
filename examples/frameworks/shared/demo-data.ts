@@ -214,5 +214,17 @@ export function frameworkHref(base: string, id: string): string {
   return `${root}${id}/`;
 }
 
-/** The slider's range, shared by every demo. */
-export const SWEEP_MS = { min: 300, max: 2400, step: 50, initial: 1100 };
+/** One sweep duration, shared by every demo. */
+export const SWEEP_MS = 1100;
+
+/**
+ * The docs site, given this app's base.
+ *
+ * Production mounts each demo at `/example/<id>/`, so stripping two segments
+ * lands on the site root. Dev serves each demo on its own port, and the docs
+ * site runs through portless at `https://glimm-adapters.localhost`.
+ */
+export function siteHref(base: string): string {
+  if (base === "/") return "https://glimm-adapters.localhost/";
+  return base.replace(/[^/]+\/?$/, "").replace(/[^/]+\/?$/, "") || "/";
+}
