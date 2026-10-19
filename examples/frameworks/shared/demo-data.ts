@@ -198,8 +198,9 @@ Keep ${demo.name}'s router in charge of navigation; glimm only paints the sweep 
 Then run the dev server and check three things: in-app links sweep, the back button still works, and the console is clean. Report what you changed.`;
 }
 
-/** Every demo, in dropdown order. */
-export const frameworks = Object.values(demos).map(({ id, name }) => ({ id, name }));
+/** Every demo, in dropdown order. The logo travels with it so the picker can
+ *  show the mark beside each name. */
+export const frameworks = Object.values(demos).map(({ id, name, logo }) => ({ id, name, logo }));
 
 /**
  * Where another framework's demo lives, given this app's base.
