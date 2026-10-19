@@ -182,8 +182,8 @@ export type DemoId = keyof typeof demos;
 /**
  * A paste-ready brief for an AI agent: install, wire, verify.
  *
- * Built from the same `file` and `code` the wiring page shows, so the two
- * cannot drift apart. The last line is what makes the result reviewable.
+ * Built from the same `file` and `code` the wiring tab shows, so the two cannot
+ * drift apart. The last line is what makes the result reviewable.
  */
 export function agentPrompt(demo: FrameworkDemo): string {
   return `Wire glimm-adapters into this ${demo.name} app.
