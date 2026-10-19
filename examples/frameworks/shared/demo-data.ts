@@ -1,8 +1,9 @@
 /**
  * The copy and setup snippet every framework demo shares.
  *
- * Each app renders the same two small pages: the sweep, and the wiring. Only
- * the framework name, accent, snippet and file name change.
+ * Each app renders the same two small pages: the setup page, and a second page
+ * that exists only so the sweep has somewhere to go. Only the framework name,
+ * accent, snippet and file name change.
  */
 
 export type FrameworkDemo = {
