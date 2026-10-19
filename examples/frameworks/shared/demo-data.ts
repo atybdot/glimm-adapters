@@ -16,9 +16,15 @@ export type FrameworkDemo = {
   logo: string;
   /** The framework's one accent colour. */
   accent: string;
-  /** One short line under the tabs, so the sweep page has a subject. */
+  /** Logo colours, in order, that `accentChain` fits into the sweep palette. */
+  palette: string[];
+  /** One short line beside the identity, so the page has a subject. */
   line: string;
-  /** The setup excerpt, verbatim. Rendered as plain text. */
+  /** Which entry this demo installs from. */
+  mode: "reveal" | "provider";
+  /** Language of the setup excerpt, for the highlighter. */
+  lang: "tsx" | "ts" | "svelte" | "vue" | "astro";
+  /** The setup excerpt, verbatim. */
   code: string;
 };
 
@@ -29,7 +35,10 @@ export const demos = {
     file: "src/App.tsx",
     logo: "logos/react-dark.svg",
     accent: "#58c4dc",
+    palette: ["#61DAFB", "#00A6ED", "#087EA4"],
     line: "React Router keeps the routes. One sweep runs between them.",
+    mode: "provider",
+    lang: "tsx",
     code: `import { GlimmProvider, useInterceptLinks } from 'glimm-adapters/react';
 
 function Sweeps() {
@@ -50,7 +59,10 @@ function Sweeps() {
     file: "src/routes/__root.tsx",
     logo: "logos/tanstack-dark.svg",
     accent: "#ff7a5c",
+    palette: ["#FF7A5C", "#E11D48"],
     line: "TanStack Router still owns navigation. glimm only paints.",
+    mode: "provider",
+    lang: "tsx",
     code: `import { GlimmProvider, InterceptLinks } from 'glimm-adapters/tanstack';
 
 export function Root() {
@@ -68,7 +80,10 @@ export function Root() {
     file: "src/routes/+layout.svelte",
     logo: "logos/svelte.svg",
     accent: "#ff5c33",
+    palette: ["#FF3E00", "#FF8D28", "#FFC400"],
     line: "SvelteKit routes as usual. The canvas survives the swap.",
+    mode: "reveal",
+    lang: "svelte",
     code: `<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -91,7 +106,10 @@ export function Root() {
     file: "src/App.vue",
     logo: "logos/vue.svg",
     accent: "#42b883",
+    palette: ["#41B883", "#00A7A0", "#35495E"],
     line: "vue-router resolves. The sweep covers the frame.",
+    mode: "reveal",
+    lang: "vue",
     code: `<script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { setupGlimmVue } from 'glimm-adapters/vue';
@@ -117,7 +135,10 @@ onUnmounted(() => glimm?.destroy());
     file: "src/layouts/Layout.astro",
     logo: "logos/astro-dark.svg",
     accent: "#b98cff",
+    palette: ["#F041FF", "#D83333", "#FF5D01"],
     line: "ClientRouter swaps the page. The canvas stays put.",
+    mode: "reveal",
+    lang: "astro",
     code: `---
 import { ClientRouter } from 'astro:transitions';
 ---
@@ -142,7 +163,10 @@ import { ClientRouter } from 'astro:transitions';
     file: "src/main.ts",
     logo: "logos/javascript.svg",
     accent: "#f7df1e",
+    palette: ["#F7DF1E", "#E2EF1B", "#C2FF3D"],
     line: "No framework. History, one canvas, and a paint.",
+    mode: "reveal",
+    lang: "ts",
     code: `import { setupGlimmVanilla } from 'glimm-adapters/vanilla';
 import { router } from './router';
 
