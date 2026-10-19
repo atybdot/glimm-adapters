@@ -1,0 +1,134 @@
+---
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Base from "../layouts/Base.astro";
+import {
+  changelogMarkdown,
+  formatDate,
+  inlineHtml,
+  releases,
+} from "../lib/changelog";
+import { pageUrl } from "../lib/page-md";
+import { changelogOgImage, changelogOgImageAlt } from "../lib/seo";
+
+/* The site is static, so parse the package changelog once at build time. */
+export const prerender = true;
+
+const pageTitle = "glimm-adapters changelog";
+const pageDescription =
+  "Every release of glimm-adapters, newest first. What shipped, what changed, and what got fixed.";
+
+const markdown = changelogMarkdown();
+const mdHref = "/changelog.md";
+const prompt = `Read the glimm-adapters changelog at ${new URL(mdHref, pageUrl).toString()} and summarize what changed in the latest release.`;
+const chatGptHref = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+const claudeHref = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
+
+const inlineLink =
+  "text-ink underline decoration-line underline-offset-[3px] transition-colors duration-150 ease-snap hover:decoration-ink";
+---
+
+<Base
+  title={pageTitle}
+  description={pageDescription}
+  image={changelogOgImage}
+  imageAlt={changelogOgImageAlt}
+>
+    <div class="mx-auto w-full max-w-[660px] px-6 pt-8 pb-32">
+      <a
+        class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-1.5 focus:text-[13px] focus:text-ink focus:no-underline"
+        href="#app-main">Skip to content</a
+      >
+
+      <SiteHeader
+        markdown={markdown}
+        mdHref={mdHref}
+        chatGptHref={chatGptHref}
+        claudeHref={claudeHref}
+      />
+
+      <main id="app-main">
+        <h1 class="text-[26px] font-semibold leading-[1.24] tracking-[-0.024em] text-ink">
+          Changelog
+        </h1>
+   
+
+        <p class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11.5px] text-muted">
+          <a class={inlineLink} href="https://github.com/atybdot/glimm-adapters/releases">GitHub releases</a>
+          <span class="text-faint" aria-hidden="true">·</span>
+          <a class={inlineLink} href="https://www.npmjs.com/package/glimm-adapters">npm</a>
+          <span class="text-faint" aria-hidden="true">·</span>
+          <span>{releases.length === 1 ? "1 release" : `${releases.length} releases`}</span>
+        </p>
+
+        <div class="mt-12 border-t border-line">
+          {
+            releases.map((release) => (
+              <article
+                id={`v${release.version}`}
+                class="grid scroll-mt-8 gap-x-8 gap-y-3  border-line py-10 sm:grid-cols-[96px_1fr]"
+              >
+                <div class="flex items-center gap-2 sm:block">
+                  <a
+                    href={`#v${release.version}`}
+                    class="font-mono text-[12px] text-muted no-underline transition-colors duration-150 ease-snap hover:text-ink"
+                  >
+                    v{release.version}
+                  </a>
+                  <time
+                    datetime={release.date}
+                    class="font-mono text-[11px] text-faint sm:mt-1 sm:block"
+                  >
+                    {formatDate(release.date)}
+                  </time>
+                </div>
+
+                <div class="min-w-0">
+                  {release.title && (
+                    <h2 class="text-[19px] font-semibold leading-[1.35] tracking-[-0.016em] text-ink">
+                      {release.title}
+                    </h2>
+                  )}
+
+                  {release.summary && (
+                    <p class="mt-2 max-w-[52ch] text-[14.5px] leading-[1.65] text-body">
+                      <span set:html={inlineHtml(release.summary)} />
+                    </p>
+                  )}
+
+                  {release.groups.length > 0 && (
+                    <div class="mt-6 flex flex-col gap-5">
+                      {release.groups.map((group) => (
+                        <section>
+                          <h3 class="text-[13.5px] font-semibold text-ink">
+                            {group.kind}
+                          </h3>
+                          <ul class="mt-2.5 flex flex-col gap-2">
+                            {group.items.map((item) => (
+                              <li class="relative pl-4 text-[13.5px] leading-[1.6] text-body before:absolute before:left-0 before:top-[0.62em] before:size-[3px] before:rounded-full before:bg-faint/70 before:content-['']">
+                                <span set:html={inlineHtml(item)} />
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))
+          }
+        </div>
+
+        {
+          releases.length === 0 && (
+            <p class="mt-12 border-t border-line pt-10 text-[14px] text-muted">
+              No releases yet. The first one lands when the package is published.
+            </p>
+          )
+        }
+
+        <SiteFooter class="mt-16" />
+      </main>
+    </div>
+</Base>

@@ -1,0 +1,18 @@
+---
+import StatusPage from "../components/StatusPage.astro";
+---
+
+<StatusPage
+  code="500"
+  tone="error"
+  title="The sweep hit a snag."
+  description="Something failed while rendering this page. Reload and it will usually recover. If it keeps happening, open an issue and say what you were doing."
+  actions={[
+    { href: "/", label: "Back home" },
+    {
+      href: "https://github.com/atybdot/glimm-adapters/issues",
+      label: "Report it",
+      external: true,
+    },
+  ]}
+/>
