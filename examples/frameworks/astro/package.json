@@ -1,0 +1,21 @@
+{
+  "name": "@glimm-examples/astro",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4606",
+    "build": "astro build",
+    "preview": "astro preview --port 4606",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@glimm-examples/shared": "workspace:*",
+    "astro": "^5.0.0",
+    "glimm-adapters": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.0",
+    "typescript": "^5.7.3"
+  }
+}

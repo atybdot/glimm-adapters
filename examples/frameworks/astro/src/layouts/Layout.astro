@@ -1,0 +1,39 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "@glimm-examples/shared/demo.css";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "glimm / Astro" } = Astro.props;
+---
+
+<html lang="en" transition:animate="none">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>{title}</title>
+    <ClientRouter fallback="swap" />
+  </head>
+  <body>
+    <div class="backdrop" aria-hidden="true"></div>
+
+    <!-- transition:persist keeps this node across Astro's swaps. The adapter
+         re-hosts it and owns the sweep. -->
+    <canvas id="glimm" transition:persist="glimm-canvas" aria-hidden="true"></canvas>
+
+    <slot />
+
+    <script>
+      import { navigate } from "astro:transitions/client";
+      import { setupGlimmAstro } from "glimm-adapters/astro";
+
+      const canvas = document.querySelector("#glimm");
+      if (canvas instanceof HTMLCanvasElement) {
+        setupGlimmAstro({ canvas, navigate, mode: "reveal" });
+      }
+    </script>
+  </body>
+</html>
