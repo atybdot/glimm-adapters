@@ -1,10 +1,13 @@
 /*
  * Shared chrome for the framework demos.
  *
- * One page shape for every framework: wordmark and a framework picker at the
- * top, the framework's logo in a card, two tab-buttons, then either the sweep
- * (home) or the wiring snippet (about). The page is dark on purpose: the band
- * reads best on a near-black ground, and covered mode samples the body colour.
+ * One page shape for every app: a masthead with the wordmark and a framework
+ * picker, a two-column body (identity on the left, the setup sheet on the
+ * right). The sheet carries both the wiring and the agent prompt as tabs, so
+ * there is one page, not three.
+ *
+ * The page is dark on purpose: the band reads best on a near-black ground, and
+ * covered mode samples the body colour.
  */
 
 @import "@fontsource-variable/manrope/index.css";
@@ -13,15 +16,24 @@
 
 :root {
   color-scheme: dark;
-  --bg: #07070b;
-  --ink: #f6f4ff;
-  --body: #dedbea;
-  --muted: #9d98ad;
-  --faint: #6f6a80;
-  --line: rgba(255, 255, 255, 0.12);
-  --line-soft: rgba(255, 255, 255, 0.07);
-  --surface: #0f0f16;
-  --accent: #58c4dc;
+  --bg: #101010;
+  --ink: #fafafa;
+  --body: #ededed;
+  --muted: #a3a3a3;
+  --faint: #6b6b6b;
+  --line: #2a2a2a;
+  --line-soft: #232323;
+  --surface: #171717;
+  --recess: #1d1d1d;
+  --accent: #7fa6ff;
+  --tok-kw: #ff7b72;
+  --tok-str: #7ee787;
+  --tok-fn: #d2a8ff;
+  --tok-num: #79c0ff;
+  --tok-typ: #ffa657;
+  --tok-attr: #79c0ff;
+  --tok-com: #8b949e;
+  --tok-pun: #6e7681;
   --font-sans:
     "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue",
     Arial, sans-serif;
