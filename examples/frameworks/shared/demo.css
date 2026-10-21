@@ -579,11 +579,25 @@ code {
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
+
+  pre {
+    padding: 12px 14px 16px;
+  }
+
+  .sheet-file {
+    padding: 12px 14px 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .switch,
-  .picker select,
+  .wordmark,
+  .next,
+  .next span,
+  .next svg,
+  .picker summary,
+  .picker-chevron,
+  .picker-item,
+  .tab,
   .copy,
   .skip {
     transition: none;
