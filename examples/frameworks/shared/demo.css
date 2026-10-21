@@ -439,93 +439,137 @@ body {
   display: block;
 }
 
-pre {
+.sheet-file {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
   margin: 0;
-  overflow-x: auto;
-  padding: 16px 18px 18px;
+  padding: 14px 18px 0;
+}
+
+pre {
+  /* One height for both tabs. The prompt is longer than the snippet, so a
+     content-sized sheet would shove the whole centred page upward on switch. */
+  height: clamp(300px, 46vh, 420px);
+  margin: 0;
+  overflow: auto;
+  padding: 12px 18px 20px;
+  scrollbar-color: #3a3a3a transparent;
+  scrollbar-width: thin;
 }
 
 code {
   color: var(--body);
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.65;
-  white-space: pre;
-}
-
-/* The agent prompt is prose, not code. Wrap it like a paragraph. */
-.code--prose code {
+  line-height: 1.7;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
-/* ---------- footer ---------- */
+/* ---------- syntax tokens ---------- */
 
-.foot {
+.t-kw {
+  color: var(--tok-kw);
+}
+
+.t-str {
+  color: var(--tok-str);
+}
+
+.t-fn {
+  color: var(--tok-fn);
+}
+
+.t-num {
+  color: var(--tok-num);
+}
+
+.t-typ {
+  color: var(--tok-typ);
+}
+
+.t-attr {
+  color: var(--tok-attr);
+}
+
+.t-com {
+  color: var(--tok-com);
+  font-style: italic;
+}
+
+.t-pun {
+  color: var(--tok-pun);
+}
+
+.t-tag {
+  color: var(--tok-kw);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- second page ---------- */
+
+.second {
   align-items: center;
-  border-top: 1px solid var(--line-soft);
   display: flex;
-  justify-content: center;
-  padding-top: 18px;
+  flex-direction: column;
+  margin-inline: auto;
+  max-width: 640px;
+  text-align: center;
 }
 
-.duration {
-  align-items: center;
-  color: var(--faint);
-  display: flex;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  gap: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.second h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0;
+  text-wrap: balance;
 }
 
-.duration input[type="range"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-  height: 18px;
-  width: clamp(130px, 30vw, 210px);
-}
-
-.duration output {
+.second p {
   color: var(--muted);
-  min-width: 56px;
-  text-align: right;
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 18px 0 0;
+  max-width: 42ch;
 }
 
-@media (max-width: 560px) {
+.second .next {
+  margin-top: 30px;
+}
+
+@media (max-width: 760px) {
+  .home {
+    gap: 34px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main {
+    justify-content: flex-start;
+    padding-block: 34px 40px;
+  }
+
+  .intro h1 {
+    margin-top: 22px;
+  }
+
+  .next {
+    margin-top: 26px;
+  }
+}
+
+@media (max-width: 520px) {
   .page {
-    padding-top: 18px;
+    padding-top: 20px;
   }
 
   .wordmark {
     font-size: 23px;
-  }
-
-  .stage {
-    gap: 20px;
-    padding-block: 34px;
-  }
-
-  .fw-card {
-    border-radius: 16px;
-    height: 120px;
-    width: 120px;
-  }
-
-  .fw-card img {
-    height: 44px;
-    width: 44px;
-  }
-
-  .switch {
-    flex: 1;
-    min-width: 0;
-    padding: 11px 12px;
-  }
-
-  pre {
-    padding: 14px;
   }
 
   /* The snippets are wider than a phone. Wrap them rather than clipping the
