@@ -6,7 +6,7 @@ const examplesRoot = join(root, "examples", "frameworks");
 const targetRoot = join(root, "apps", "web", "public", "example");
 
 // SPA frameworks need an index.html copy per client-side route so a hard
-// refresh on /example/<fw>/about (or /prompt) still serves the shell.
+// refresh on /example/<fw>/about still serves the shell.
 const spaFrameworks = new Set(["react", "vue", "svelte", "tanstack", "vanilla"]);
 
 const frameworks = ["vanilla", "react", "vue", "svelte", "tanstack", "astro"];
@@ -24,7 +24,7 @@ for (const fw of frameworks) {
   mkdirSync(dest, { recursive: true });
   cpSync(src, dest, { recursive: true });
   if (spaFrameworks.has(fw)) {
-    for (const route of ["about", "prompt"]) {
+    for (const route of ["about"]) {
       const dir = join(dest, route);
       mkdirSync(dir, { recursive: true });
       copyFileSync(join(dest, "index.html"), join(dir, "index.html"));
