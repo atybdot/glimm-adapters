@@ -49,6 +49,9 @@ Builds use `/example/<framework>/` as their base, matching the docs site. Previe
 
 ## Notes
 
+- Framework marks live in `shared/public/logos`. Every app points `publicDir` at that folder, so the
+  repository keeps one source copy while each build still emits the marks under `<base>logos/`.
+
 - Apps import `glimm-adapters` from the workspace, which resolves to `packages/glimm-adapters/dist`.
   After editing the package source, rebuild it before reloading:
 
