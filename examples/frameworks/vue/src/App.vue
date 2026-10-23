@@ -1,23 +1,17 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { setupGlimmVue, type VueSweepApi } from "glimm-adapters/vue";
-import { demos, frameworks, frameworkHref, SWEEP_MS } from "@glimm-examples/shared/demo-data";
+import { demos, frameworks, frameworkHref, siteHref } from "@glimm-examples/shared/demo-data";
+import { initPicker } from "@glimm-examples/shared/picker";
 import { defaults } from "./glimm";
 import { stripBase } from "./router";
 
 const demo = demos.vue;
-const logo = `${import.meta.env.BASE_URL}${demo.logo}`;
+const base = import.meta.env.BASE_URL;
 
 const canvas = ref<HTMLCanvasElement | null>(null);
-const route = useRoute();
 const router = useRouter();
-const page = computed(() => {
-  const path = route.path.replace(/\/+$/, "");
-  return path === "/about" ? "wiring" : path === "/prompt" ? "prompt" : "sweep";
-});
-const wiring = computed(() => page.value === "wiring");
-const sweepMs = ref(defaults.sweepMs);
 
 // vue-router resolves once the route is confirmed, which can be a tick before
 // Vue has patched the DOM. The adapter waits for the next paint after this
@@ -35,26 +29,20 @@ const sweepRouter = {
   },
 };
 
-function onDuration(event: Event) {
-  const input = event.target as HTMLInputElement;
-  sweepMs.value = Number(input.value);
-  defaults.sweepMs = sweepMs.value;
-}
-
-function onFramework(event: Event) {
-  const select = event.target as HTMLSelectElement;
-  window.location.assign(frameworkHref(import.meta.env.BASE_URL, select.value));
-}
-
 let glimm: VueSweepApi | null = null;
+let stopPicker: (() => void) | null = null;
 
 onMounted(() => {
+  stopPicker = initPicker();
   if (canvas.value) {
     glimm = setupGlimmVue({ canvas: canvas.value, router: sweepRouter, mode: "reveal", defaults });
   }
 });
 
-onUnmounted(() => glimm?.destroy());
+onUnmounted(() => {
+  glimm?.destroy();
+  stopPicker?.();
+});
 </script>
 
 <template>
@@ -64,65 +52,42 @@ onUnmounted(() => glimm?.destroy());
     <a class="skip" href="#main">Skip to content</a>
 
     <header class="bar">
-      <RouterLink class="wordmark" to="/" aria-label="glimm-adapters home"
-        >glimm-adapters</RouterLink
-      >
-      <span class="slash" aria-hidden="true">/</span>
-      <label class="picker">
-        <span class="sr-only">Framework</span>
-        <select name="framework" :value="demo.id" @change="onFramework">
-          <option v-for="framework in frameworks" :key="framework.id" :value="framework.id">
+      <a class="wordmark" :href="siteHref(base)" data-glimm-skip>glimm-adapters</a>
+      <details class="picker" data-picker>
+        <summary>
+          <img class="picker-mark" :src="`${base}${demo.logo}`" alt="" width="17" height="17" />
+          <span>{{ demo.name }}</span>
+          <svg
+            class="picker-chevron"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m3 4.5 3 3 3-3" />
+          </svg>
+        </summary>
+        <div class="picker-menu">
+          <a
+            v-for="framework in frameworks"
+            :key="framework.id"
+            class="picker-item"
+            :href="frameworkHref(base, framework.id)"
+            data-glimm-skip
+            :aria-current="framework.id === demo.id ? 'page' : undefined"
+          >
+            <img :src="`${base}${framework.logo}`" alt="" width="17" height="17" />
             {{ framework.name }}
-          </option>
-        </select>
-        <svg
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m3 4.5 3 3 3-3" />
-        </svg>
-      </label>
+          </a>
+        </div>
+      </details>
     </header>
 
-    <main class="stage" id="main">
-      <div class="fw-card">
-        <img :src="logo" alt="" width="52" height="52" />
-        <h1>{{ demo.name }}</h1>
-      </div>
-
-      <nav class="switcher" aria-label="Demo pages">
-        <RouterLink v-if="page !== 'sweep'" class="switch" to="/">Sweep</RouterLink>
-        <span v-else class="switch" aria-current="page">Sweep</span>
-
-        <span v-if="wiring" class="switch" aria-current="page">Wiring</span>
-        <RouterLink v-else class="switch" to="/about">Wiring</RouterLink>
-
-        <span v-if="page === 'prompt'" class="switch" aria-current="page">Prompt</span>
-        <RouterLink v-else class="switch" to="/prompt">Prompt</RouterLink>
-      </nav>
-
-      <RouterView v-if="page !== 'sweep'" />
-      <p v-else class="line">{{ demo.line }}</p>
+    <main class="main" id="main">
+      <RouterView />
     </main>
-
-    <footer class="foot">
-      <label class="duration">
-        <span>duration</span>
-        <input
-          type="range"
-          :min="SWEEP_MS.min"
-          :max="SWEEP_MS.max"
-          :step="SWEEP_MS.step"
-          :value="sweepMs"
-          @input="onDuration"
-        />
-        <output>{{ sweepMs }} ms</output>
-      </label>
-    </footer>
   </div>
 </template>
