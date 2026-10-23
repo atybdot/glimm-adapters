@@ -1,16 +1,78 @@
-import { type CSSProperties, type ReactNode, useRef } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   agentPrompt,
   demos,
   frameworks,
   frameworkHref,
-  SWEEP_MS,
+  siteHref,
 } from "@glimm-examples/shared/demo-data";
 import { flashCopy } from "@glimm-examples/shared/copy";
+import { highlight } from "@glimm-examples/shared/highlight";
+import { initPicker } from "@glimm-examples/shared/picker";
 
 const demo = demos.tanstack;
 const accent = { "--accent": demo.accent } as CSSProperties;
+const base = import.meta.env.BASE_URL;
+
+function Arrow({ back = false }: { back?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {back ? <path d="M9 1.5 3.5 6 9 10.5" /> : <path d="m6 1.5 4.5 4.5L6 10.5M1.5 6h9" />}
+    </svg>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg
+      className="picker-chevron"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m3 4.5 3 3 3-3" />
+    </svg>
+  );
+}
+
+function Picker() {
+  return (
+    <details className="picker" data-picker>
+      <summary>
+        <img className="picker-mark" src={`${base}${demo.logo}`} alt="" width="17" height="17" />
+        <span>{demo.name}</span>
+        <Chevron />
+      </summary>
+      <div className="picker-menu">
+        {frameworks.map((framework) => (
+          <a
+            key={framework.id}
+            className="picker-item"
+            href={frameworkHref(base, framework.id)}
+            data-glimm-skip
+            aria-current={framework.id === demo.id ? "page" : undefined}
+          >
+            <img src={`${base}${framework.logo}`} alt="" width="17" height="17" />
+            {framework.name}
+          </a>
+        ))}
+      </div>
+    </details>
+  );
+}
 
 function CopyButton({ text }: { text: string }) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -20,7 +82,7 @@ function CopyButton({ text }: { text: string }) {
       ref={ref}
       type="button"
       className="copy"
-      aria-label="Copy the snippet"
+      aria-label="Copy"
       onClick={() => {
         if (ref.current) void flashCopy(ref.current, text);
       }}
@@ -58,58 +120,8 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function Chevron() {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m3 4.5 3 3 3-3" />
-    </svg>
-  );
-}
-
-function Footer({ sweepMs, onSweepMs }: { sweepMs: number; onSweepMs: (ms: number) => void }) {
-  return (
-    <footer className="foot">
-      <label className="duration">
-        <span>duration</span>
-        <input
-          type="range"
-          min={SWEEP_MS.min}
-          max={SWEEP_MS.max}
-          step={SWEEP_MS.step}
-          value={sweepMs}
-          onChange={(e) => onSweepMs(Number(e.target.value))}
-        />
-        <output>{sweepMs} ms</output>
-      </label>
-    </footer>
-  );
-}
-
-export function Shell({
-  sweepMs,
-  onSweepMs,
-  children,
-}: {
-  sweepMs: number;
-  onSweepMs: (ms: number) => void;
-  children: ReactNode;
-}) {
-  const { pathname } = useLocation();
-  const route = pathname.replace(/\/+$/, "") || "/";
-  const page = route === "/about" ? "wiring" : route === "/prompt" ? "prompt" : "sweep";
-  const tabs = [
-    { id: "sweep", label: "Sweep", to: "/" },
-    { id: "wiring", label: "Wiring", to: "/about" },
-    { id: "prompt", label: "Prompt", to: "/prompt" },
-  ] as const;
+export function Shell({ children }: { children: ReactNode }) {
+  useEffect(() => initPicker(), []);
 
   return (
     <div className="page" style={accent}>
@@ -118,87 +130,85 @@ export function Shell({
       </a>
 
       <header className="bar">
-        <Link className="wordmark" to="/" aria-label="glimm-adapters home">
+        <a className="wordmark" href={siteHref(base)} data-glimm-skip>
           glimm-adapters
-        </Link>
-        <span className="slash" aria-hidden="true">
-          /
-        </span>
-        <label className="picker">
-          <span className="sr-only">Framework</span>
-          <select
-            name="framework"
-            defaultValue={demo.id}
-            onChange={(e) =>
-              window.location.assign(frameworkHref(import.meta.env.BASE_URL, e.target.value))
-            }
-          >
-            {frameworks.map((framework) => (
-              <option key={framework.id} value={framework.id}>
-                {framework.name}
-              </option>
-            ))}
-          </select>
-          <Chevron />
-        </label>
+        </a>
+        <Picker />
       </header>
 
-      <main className="stage" id="main">
-        <div className="fw-card">
-          <img src={`${import.meta.env.BASE_URL}${demo.logo}`} alt="" width="52" height="52" />
-          <h1>{demo.name}</h1>
-        </div>
-
-        <nav className="switcher" aria-label="Demo pages">
-          {tabs.map((tab) =>
-            tab.id === page ? (
-              <span key={tab.id} className="switch" aria-current="page">
-                {tab.label}
-              </span>
-            ) : (
-              <Link key={tab.id} className="switch" to={tab.to}>
-                {tab.label}
-              </Link>
-            ),
-          )}
-        </nav>
-
+      <main className="main" id="main">
         {children}
       </main>
-
-      <Footer sweepMs={sweepMs} onSweepMs={onSweepMs} />
     </div>
   );
 }
 
 export function HomePage() {
-  return <p className="line">{demo.line}</p>;
-}
+  const [tab, setTab] = useState<"wiring" | "prompt">("wiring");
+  const prose = tab === "prompt";
+  const wiring = highlight(demo.code, demo.lang);
 
-export function PromptPage() {
   return (
-    <figure className="code code--prose">
-      <figcaption className="code-head">
-        <span>agent prompt</span>
-        <CopyButton text={agentPrompt(demo)} />
-      </figcaption>
-      <pre>
-        <code>{agentPrompt(demo)}</code>
-      </pre>
-    </figure>
+    <div className="home">
+      <section className="intro">
+        <img className="mark" src={`${base}${demo.logo}`} alt="" width="38" height="38" />
+        <h1>{demo.name}</h1>
+        <p className="line">{demo.line}</p>
+        <Link className="next" to="/about">
+          <span>Second page</span>
+          <Arrow />
+        </Link>
+      </section>
+
+      <section className="panel" aria-label="Setup">
+        <div className="panel-head">
+          <div className="tabs" role="group" aria-label="Setup">
+            <button
+              type="button"
+              className="tab"
+              data-tab="wiring"
+              aria-pressed={tab === "wiring"}
+              onClick={() => setTab("wiring")}
+            >
+              Wiring
+            </button>
+            <button
+              type="button"
+              className="tab"
+              data-tab="prompt"
+              aria-pressed={prose}
+              onClick={() => setTab("prompt")}
+            >
+              Agent prompt
+            </button>
+          </div>
+          <CopyButton text={prose ? agentPrompt(demo) : demo.code} />
+        </div>
+
+        <div className={`sheet${prose ? " sheet--prose" : ""}`}>
+          <p className="sheet-file">{prose ? "agent prompt" : demo.file}</p>
+          <pre>
+            {prose ? (
+              <code>{agentPrompt(demo)}</code>
+            ) : (
+              <code dangerouslySetInnerHTML={{ __html: wiring }} />
+            )}
+          </pre>
+        </div>
+      </section>
+    </div>
   );
 }
 
 export function AboutPage() {
   return (
-    <figure className="code">
-      <figcaption className="code-head">
-        <span>{demo.file}</span>
-        <CopyButton text={demo.code} />
-      </figcaption>
-      <pre>
-        <code>{demo.code}</code>
-      </pre>
-    </figure>
+    <section className="second">
+      <h1>Second page.</h1>
+      <p>Same canvas, same listener. The band covered once and left.</p>
+      <Link className="next" to="/">
+        <Arrow back />
+        <span>Back to the demo</span>
+      </Link>
+    </section>
   );
 }
