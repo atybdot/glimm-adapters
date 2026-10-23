@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 // root so `pnpm dev:examples` opens on http://localhost:4605/.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/example/tanstack/" : "/",
+  publicDir: "../shared/public",
   plugins: [react()],
   // The workspace adapter carries its own React/TanStack dev links, which
   // otherwise bundle a second router and leave `useRouter()` outside the
