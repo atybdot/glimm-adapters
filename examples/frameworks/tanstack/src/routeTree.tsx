@@ -1,6 +1,6 @@
 import { createRootRoute, createRoute } from "@tanstack/react-router";
 import { Root } from "./Root";
-import { AboutPage, HomePage, PromptPage } from "./ui";
+import { AboutPage, HomePage } from "./ui";
 
 const rootRoute = createRootRoute({ component: Root });
 
@@ -16,10 +16,4 @@ const aboutRoute = createRoute({
   component: AboutPage,
 });
 
-const promptRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/prompt",
-  component: PromptPage,
-});
-
-export const routeTree = rootRoute.addChildren([indexRoute, aboutRoute, promptRoute]);
+export const routeTree = rootRoute.addChildren([indexRoute, aboutRoute]);
