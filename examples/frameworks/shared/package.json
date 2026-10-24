@@ -1,0 +1,9 @@
+{
+  "name": "@glimm-examples/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./demo.css": "./demo.css"
+  }
+}

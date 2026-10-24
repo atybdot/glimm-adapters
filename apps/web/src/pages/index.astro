@@ -1,0 +1,498 @@
+---
+import type { EasingName } from "glimm-adapters";
+import { frameworks } from "../lib/frameworks";
+import { highlight } from "../lib/highlight";
+import {
+  api,
+  faqs,
+  fits,
+  overrideCode,
+  prompts,
+  skipCode,
+  steps,
+  triggers,
+} from "../lib/content";
+import { agentPrompt, pageMarkdown } from "../lib/page-md";
+import { sweepOptions } from "../lib/options";
+import CodeBlock from "../components/CodeBlock";
+import Dock from "../components/Dock";
+import BandWidthLab from "../components/BandWidthLab";
+import CustomPaletteLab from "../components/CustomPaletteLab";
+import EasingLab from "../components/EasingLab";
+import type { EasingOption } from "../components/EasingLab";
+import Faq from "../components/Faq";
+import HowItWorks from "../components/HowItWorks";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import StageDemo from "../components/StageDemo";
+import Tabs from "../components/Tabs";
+import Base from "../layouts/Base.astro";
+
+const pageTitle = "glimm-adapters: glimm sweep transitions for any router";
+const pageDescription =
+  "A WebGL band sweeps in while your router loads the next view, then reveals it. Thin adapters for TanStack Router, React, SvelteKit, Vue, Nuxt, Astro and vanilla JS.";
+
+/* Shared class strings, so the markup stays readable. */
+const section = "mt-[88px] scroll-mt-6";
+const h2 = "text-[17px] font-semibold tracking-[-0.012em] text-ink";
+const p = "mt-4 text-[15px] leading-[1.7] text-body";
+const link =
+  "text-ink underline decoration-line underline-offset-[3px] transition-colors duration-150 ease-snap hover:decoration-ink";
+
+/* The engine's easing table, mirrored here only to draw the graph. Keep in
+   step with `EASINGS` in the glimm core (re-exported by `glimm-adapters`); the
+   curve drawn is the curve that plays. */
+function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const bezX = (t: number) => 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t;
+  const bezY = (t: number) => 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t;
+  return (progress: number) => {
+    let lo = 0;
+    let hi = 1;
+    let t = progress;
+    for (let i = 0; i < 24; i += 1) {
+      const x = bezX(t);
+      if (Math.abs(x - progress) < 1e-5) break;
+      if (x < progress) lo = t;
+      else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return bezY(t);
+  };
+}
+
+const easingFns: Record<string, (t: number) => number> = {
+  ease: cubicBezier(0.25, 0.1, 0.25, 1),
+  easeOutExpo: (t) => (t === 1 ? 1 : 1 - 2 ** (-10 * t)),
+  easeOutQuart: (t) => 1 - (1 - t) ** 4,
+  easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+  easeInOutQuint: (t) => (t < 0.5 ? 16 * t ** 5 : 1 - (-2 * t + 2) ** 5 / 2),
+  snap: cubicBezier(1, 0, 0.35, 0.95),
+  back: cubicBezier(0.175, 0.885, 0.32, 1.1),
+  linear: (t) => t,
+};
+
+/* Samples one curve into SVG polyline points, on a fixed domain so the
+   options stay comparable and `back`'s overshoot still fits the box. */
+function curvePoints(fn: (t: number) => number) {
+  const pad = 8;
+  const span = 100 - 2 * pad;
+  const points: string[] = [];
+  for (let i = 0; i <= 48; i += 1) {
+    const t = i / 48;
+    points.push(`${(t * 100).toFixed(1)},${(pad + (1 - fn(t)) * span).toFixed(1)}`);
+  }
+  return points.join(" ");
+}
+
+const easings: EasingOption[] = (
+  [
+    { name: "ease", note: "Default. Calm out of the gate and calm into the landing." },
+    { name: "easeOutExpo", note: "Leaves fast and spends a long time settling." },
+    { name: "easeOutQuart", note: "Snappy, with no overshoot at the end." },
+    { name: "easeInOutCubic", note: "Even both ways, a steady read." },
+    { name: "easeInOutQuint", note: "More contrast, slow at both ends." },
+    { name: "snap", note: "Sharp and mechanical. Reads as a cut, not a glide." },
+    { name: "back", note: "A small pull back before the move, so it lands with weight." },
+    { name: "linear", note: "Constant speed. Useful when you want it dead neutral." },
+  ] as { name: EasingName; note: string }[]
+).map((easing) => ({
+  ...easing,
+  points: curvePoints(easingFns[easing.name] ?? ((t) => t)),
+}));
+
+const dockItems = [
+  { id: "app-top", label: "Introduction" },
+  { id: "how", label: "How it works" },
+  { id: "triggers", label: "Triggers" },
+  { id: "install", label: "Install" },
+  { id: "adapters", label: "Adapters" },
+  { id: "api", label: "API" },
+  { id: "options", label: "Options" },
+  { id: "easing", label: "Easing" },
+  { id: "band", label: "Band width" },
+  { id: "palette", label: "Custom palette" },
+  { id: "skip", label: "Skip and modifiers" },
+  { id: "fits", label: "Where it fits" },
+  { id: "faq", label: "FAQ" },
+  { id: "ack", label: "Acknowledgments" },
+];
+
+/* Triggers and adapters both render through the shared `Tabs` island, which
+   wants pre-highlighted markup for its code panels. Highlighting runs here, in
+   frontmatter, so no highlighter ships to the client. */
+const triggerTabs = triggers.map((trigger) => ({
+  id: trigger.id,
+  label: trigger.name,
+  caption: trigger.label,
+  code: trigger.code,
+  html: highlight(trigger.code, trigger.lang),
+  file: trigger.file,
+}));
+
+const adapterTabs = frameworks.map((fw) => ({
+  id: fw.id,
+  label: fw.name,
+  logo: fw.logo,
+  caption: fw.label,
+  code: fw.code,
+  html: highlight(fw.code, fw.lang),
+  file: fw.badge,
+}));
+
+const installCode = "npm install glimm-adapters";
+
+const markdown = pageMarkdown();
+const chatGptHref = `https://chatgpt.com/?q=${encodeURIComponent(agentPrompt)}`;
+const claudeHref = `https://claude.ai/new?q=${encodeURIComponent(agentPrompt)}`;
+---
+
+<Base title={pageTitle} description={pageDescription}>
+    <div class="mx-auto w-full max-w-[660px] px-6 pt-8 pb-32">
+      <a
+        class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-1.5 focus:text-[13px] focus:text-ink focus:no-underline"
+        href="#app-main">Skip to content</a
+      >
+
+      <SiteHeader
+        markdown={markdown}
+        mdHref="/index.md"
+        chatGptHref={chatGptHref}
+        claudeHref={claudeHref}
+      />
+
+      <main id="app-main">
+        <h1
+          id="app-top"
+          class="max-w-[22ch] scroll-mt-6 text-balance text-[26px] font-semibold leading-[1.24] tracking-[-0.024em] text-ink"
+        >
+          Sweep between pages while the next one loads.
+        </h1>
+        <p class="mt-5 max-w-[58ch] text-[16.5px] leading-[1.65] text-body">
+          A WebGL band crosses the screen while your router loads the next view, then lifts away.
+          <code>glimm-adapters</code> wires that sweep into the router you already have, so navigation
+          is one continuous move instead of a white flash.
+        </p>
+        <p class={p}>
+          The engine is <a class={link} href="https://glimm.dev" target="_blank" rel="noreferrer"
+            >glimm</a
+          > by <a class={link} href="https://x.com/nomandsign" target="_blank" rel="noreferrer"
+            >Noman Ijaz</a
+          >. This package adds the thin shell each router needs.
+        </p>
+
+        <!-- ---------- live demo ---------- -->
+        <StageDemo client:visible />
+
+        <!-- ---------- how it works ---------- -->
+        <section class={section} id="how">
+          <h2 class={h2}>How it works</h2>
+          <p class={p}>
+            A sweep is four moments. The band covers the old view, your router commits the
+            navigation, the next view paints underneath, then the band reveals it. It waits for your
+            app instead of a timer, so the swap never lands on a half-drawn page.
+          </p>
+
+          <HowItWorks client:visible steps={steps} />
+
+          <p class={p}>
+            One fragment shader draws the band. <code>createShader</code> owns a canvas and
+            <code>playSweep</code> moves its progress from 0 to 1, so the work stays on the GPU.
+          </p>
+          <p class={p}>
+            <code>interceptLinks</code> adds a single click listener to the document, so the anchors
+            you already have keep working. Cmd-clicks, <code>target="_blank"</code>, cross-origin
+            URLs and <code>#hash</code> links pass through untouched. Add
+            <code>data-glimm-skip</code> to leave a link alone.
+          </p>
+        </section>
+
+        <!-- ---------- triggers ---------- -->
+        <section class={section} id="triggers">
+          <h2 class={h2}>Triggers</h2>
+          <p class={p}>
+            There are three ways to trigger a transition, and you can use any combination across your
+            app. <code>TransitionLink</code> replaces standard links when the destination is known
+            upfront. <code>useTransitionRouter()</code> handles programmatic navigation, like redirects
+            after form submissions. Or drop in <code>{"<InterceptLinks />"}</code> at the root level to
+            automatically apply transitions to all internal links without touching existing code.
+          </p>
+
+          <Tabs
+            client:visible
+            items={triggerTabs}
+            idPrefix="app-trigger"
+            label="Trigger"
+            size="sm"
+          />
+        </section>
+
+        <!-- ---------- install ---------- -->
+        <section class={section} id="install">
+          <h2 class={h2}>Install</h2>
+          <p class={p}>
+            The fastest way in is a coding agent. Describe the sweep you want and it writes the
+            canvas, the wiring and any per-link overrides.
+          </p>
+          <div class="mt-5">
+            <CodeBlock
+              client:visible
+              label="Prompts"
+              code={prompts}
+              html={highlight(prompts, "text")}
+              file="text"
+              muted
+            />
+          </div>
+          <p class={p}>Or install it by hand. The glimm engine ships inside the package.</p>
+          <div class="mt-5">
+            <CodeBlock
+              client:visible
+              label="Terminal"
+              code={installCode}
+              html={highlight(installCode, "text")}
+              file="shell"
+            />
+          </div>
+          <p class={p}>
+            Then wire it into your router. Every adapter is one persisted canvas and one call.
+          </p>
+        </section>
+
+        <!-- ---------- adapters ---------- -->
+        <section class={section} id="adapters">
+          <h2 class={h2}>Adapters</h2>
+          <p class={p}>
+            One engine, six entries. Each adapter wraps the same sweep for one router and re-exports
+            the glimm API, so there is nothing new to learn. Pick yours.
+          </p>
+
+          <Tabs
+            client:visible
+            items={adapterTabs}
+            idPrefix="app-adapter"
+            label="Adapter"
+            size="md"
+          />
+        </section>
+
+        <!-- ---------- api ---------- -->
+        <section class={section} id="api">
+          <h2 class={h2}>API</h2>
+          <p class={p}>
+            The adapters are a thin shell over a small vanilla core. Everything below comes from
+            <code>glimm-adapters</code>, so you can wire the sweep into any router, or skip the router
+            entirely.
+          </p>
+          <div class="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+            <table class="w-full border-collapse text-left text-[13px] leading-[1.5]">
+              <thead>
+                <tr>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    Primitive
+                  </th>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    What it does
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line-soft">
+                {
+                  api.map((row) => (
+                    <tr>
+                      <td class="px-3 py-3 align-top font-mono text-[12.5px] text-ink">{row[0]}</td>
+                      <td class="px-3 py-3 align-top text-body">{row[1]}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ---------- options ---------- -->
+        <section class={section} id="options">
+          <h2 class={h2}>Options</h2>
+          <p class={p}>
+            Every option has a default. Set them once on the provider, or pass them per call when
+            one link should sweep differently from the rest.
+          </p>
+          <div class="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+            <table class="w-full border-collapse text-left text-[13px] leading-[1.5]">
+              <thead>
+                <tr>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    Prop
+                  </th>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    Type
+                  </th>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    Default
+                  </th>
+                  <th
+                    class="border-b border-line bg-recess px-3 py-2.5 text-[12.5px] font-semibold text-ink"
+                  >
+                    What it does
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line-soft">
+                {
+                  sweepOptions.map((row) => (
+                    <tr>
+                      <td class="whitespace-nowrap px-3 py-3 align-top font-mono text-[12.5px] text-ink">
+                        {row[0]}
+                      </td>
+                      <td class="px-3 py-3 align-top font-mono text-[12px] text-muted">{row[1]}</td>
+                      <td class="whitespace-nowrap px-3 py-3 align-top font-mono text-[12px] text-muted">
+                        {row[2]}
+                      </td>
+                      <td class="px-3 py-3 align-top text-body">{row[3]}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ---------- easing ---------- -->
+        <section class={section} id="easing">
+          <h2 class={h2}>Easing</h2>
+          <p class={p}>
+            The curve decides how the move feels. The default reads calm, but some routes want a
+            faster start or a little weight on the landing. Preview any curve across the whole page.
+          </p>
+
+          <EasingLab client:visible easings={easings} />
+        </section>
+
+        <!-- ---------- band width ---------- -->
+        <section class={section} id="band">
+          <h2 class={h2}>Band width</h2>
+          <p class={p}>
+            <code>bandTight</code> sets how concentrated the band is. Lower values read wider and
+            softer, higher values read tighter. Drag across the band to tune its width, then preview
+            it on the page.
+          </p>
+
+          <BandWidthLab client:visible />
+        </section>
+
+        <!-- ---------- custom palette ---------- -->
+        <section class={section} id="palette">
+          <h2 class={h2}>Custom palette</h2>
+          <p class={p}>
+            A palette is a cosine fit: <code>color(t) = a + b·cos(2π·(c·t + d))</code>, each of{" "}
+            <code>a</code>, <code>b</code>, <code>c</code>, <code>d</code> an RGB triplet. Roll one
+            with Shuffle, then copy the values.
+          </p>
+
+          <CustomPaletteLab client:visible />
+        </section>
+
+        <!-- ---------- skip and modifiers ---------- -->
+        <section class={section} id="skip">
+          <h2 class={h2}>Skip and modifiers</h2>
+          <p class={p}>
+            The interceptor follows the browser's own rules. Cmd-clicks, middle-clicks, downloads,
+            <code>target="_blank"</code> links and cross-origin URLs never sweep, and neither do
+            <code>#hash</code> links. Add <code>data-glimm-skip</code> to leave any link alone.
+          </p>
+          <div class="mt-5">
+            <CodeBlock
+              client:visible
+              label="links.html"
+              code={skipCode}
+              html={highlight(skipCode, "html")}
+              file="html"
+            />
+          </div>
+          <p class={p}>Per-link overrides take the same options object.</p>
+          <div class="mt-5">
+            <CodeBlock
+              client:visible
+              label="nav.tsx"
+              code={overrideCode}
+              html={highlight(overrideCode, "tsx")}
+              file="ts"
+            />
+          </div>
+        </section>
+
+        <!-- ---------- where it fits ---------- -->
+        <section class={section} id="fits">
+          <h2 class={h2}>Where it fits</h2>
+          <p class={p}>
+            A sweep marks a moment. Put one on every click and it stops meaning anything, so save it
+            for moves that change where you are.
+          </p>
+
+          <div class="mt-6 grid gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-2">
+            <div class="bg-surface p-5">
+              <h3 class="text-[13px] font-semibold text-ink">Sweep for</h3>
+              <ul class="mt-3.5 flex flex-col gap-3">
+                {
+                  fits
+                    .filter(([, yes]) => yes)
+                    .map(([moment]) => (
+                      <li class="text-[13.5px] leading-[1.55] text-body">{moment}</li>
+                    ))
+                }
+              </ul>
+            </div>
+
+            <div class="bg-surface p-5">
+              <h3 class="text-[13px] font-semibold text-muted">Leave alone</h3>
+              <ul class="mt-3.5 flex flex-col gap-3">
+                {
+                  fits
+                    .filter(([, yes]) => !yes)
+                    .map(([moment]) => (
+                      <li class="text-[13.5px] leading-[1.55] text-muted">{moment}</li>
+                    ))
+                }
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------- faq ---------- -->
+        <section class={section} id="faq">
+          <h2 class={h2}>FAQ</h2>
+          <Faq client:visible faqs={faqs} />
+        </section>
+
+        <!-- ---------- acknowledgments ---------- -->
+        <section class={section} id="ack">
+          <h2 class={h2}>Acknowledgments</h2>
+          <div class="app-ack">
+            <p class={p}>
+              glimm-adapters is built on top of{" "}
+              <a class={link} href="https://glimm.dev" target="_blank" rel="noreferrer">glimm</a>, the
+              WebGL sweep engine by{" "}
+              <a class={link} href="https://x.com/nomandsign" target="_blank" rel="noreferrer">
+                Noman Ijaz
+              </a>
+              . The engine is MIT licensed and is not forked; this package adds the thin adapter
+              layer each router needs. Thanks to Noman for the original work.
+            </p>
+          </div>
+        </section>
+
+        <SiteFooter />
+      </main>
+    </div>
+
+    <Dock client:load items={dockItems} />
+</Base>

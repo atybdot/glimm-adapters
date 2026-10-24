@@ -1,0 +1,42 @@
+---
+import { GithubIcon, Mail01Icon, NewTwitterIcon } from "@hugeicons/core-free-icons";
+import Icon from "./Icon.astro";
+import Wordmark from "./Wordmark";
+import { wordmarkSweeps } from "../lib/wordmark";
+
+const socials = [
+  { href: "https://github.com/atybdot", label: "atyb on GitHub", icon: GithubIcon, external: true },
+  { href: "https://x.com/atybdot", label: "atyb on X", icon: NewTwitterIcon, external: true },
+  { href: "mailto:hi@atyb.dev", label: "Email atyb", icon: Mail01Icon, external: false },
+];
+
+type Props = {
+  class?: string;
+};
+
+const { class: className = "mt-[88px]" } = Astro.props;
+---
+
+<footer
+  class={`flex flex-col gap-4 border-t border-line pt-6 ${className}`.trim()}
+>
+  <div class="flex items-center justify-between gap-4">
+    <Wordmark client:visible sweeps={wordmarkSweeps} href="/" label="glimm-adapters" />
+
+    <nav class="flex items-center gap-1" aria-label="atyb elsewhere">
+      {
+        socials.map((social) => (
+          <a
+            class="inline-flex size-9 items-center justify-center rounded-control text-muted no-underline transition-colors duration-150 ease-snap hover:bg-recess hover:text-ink"
+            href={social.href}
+            target={social.external ? "_blank" : undefined}
+            rel={social.external ? "noreferrer" : undefined}
+            aria-label={social.label}
+          >
+            <Icon icon={social.icon} size={17} />
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</footer>

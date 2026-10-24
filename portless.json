@@ -1,6 +1,6 @@
 {
   "apps": {
-    "apps/web": { "name": "better-glimm" },
-    "packages/better-glimm": { "proxy": false }
+    "apps/web": { "name": "glimm-adapters" },
+    "packages/glimm-adapters": { "proxy": false }
   }
 }

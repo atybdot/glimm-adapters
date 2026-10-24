@@ -1,0 +1,70 @@
+---
+import SiteFooter from "./SiteFooter.astro";
+import SiteHeader from "./SiteHeader.astro";
+import Base from "../layouts/Base.astro";
+
+type Action = {
+  href: string;
+  label: string;
+  external?: boolean;
+};
+
+type Props = {
+  /** The HTTP status, shown large. `404`, `500`. */
+  code: string;
+  title: string;
+  description: string;
+  actions: Action[];
+  /** `error` paints the code in the red band instead of the prism one. */
+  tone?: "default" | "error";
+};
+
+const { code, title, description, actions, tone = "default" } = Astro.props;
+
+const fullTitle = `${title} · glimm-adapters`;
+
+const base =
+  "inline-flex h-9 items-center rounded-control px-3.5 text-[13.5px] font-medium no-underline transition-[background-color,color,border-color,transform] duration-150 ease-snap active:scale-[0.98]";
+const primary = `${base} bg-ink text-canvas hover:bg-body`;
+const secondary = `${base} border border-line bg-surface text-body hover:bg-recess hover:text-ink`;
+---
+
+<Base title={fullTitle} description={description} noindex sweepOnLoad>
+    <div class="mx-auto flex min-h-screen w-full max-w-[660px] flex-col px-6 pt-8 pb-16">
+      <SiteHeader class="" />
+
+      <main class="flex flex-1 flex-col justify-center py-20">
+        <p
+          class:list={[
+            "app-status-code  font-sans text-[76px] font-bold tabular-nums leading-none sm:text-[92px]",
+            tone === "error" && "app-status-code--error",
+          ]}
+        >
+          {code}
+        </p>
+        <h1
+          class="mt-6 max-w-[22ch] text-balance text-[26px] font-semibold leading-[1.24] tracking-[-0.024em] text-ink"
+        >
+          {title}
+        </h1>
+        <p class="mt-4 max-w-[52ch] text-[15.5px] leading-[1.65] text-body">{description}</p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-2">
+          {
+            actions.map((action, index) => (
+              <a
+                href={action.href}
+                class={index === 0 ? primary : secondary}
+                target={action.external ? "_blank" : undefined}
+                rel={action.external ? "noreferrer" : undefined}
+              >
+                {action.label}
+              </a>
+            ))
+          }
+        </div>
+      </main>
+
+      <SiteFooter class="" />
+    </div>
+</Base>

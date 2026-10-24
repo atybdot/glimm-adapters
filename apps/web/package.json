@@ -1,0 +1,54 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "glimm-adapters demo site (Astro on Cloudflare Workers).",
+  "type": "module",
+  "scripts": {
+    "dev": "portless",
+    "dev:app": "cf dev",
+    "build": "node scripts/og.mjs && cf build",
+    "og": "node scripts/og.mjs",
+    "preview": "astro preview",
+    "deploy": "node scripts/og.mjs && cf build && cf deploy --prebuilt",
+    "typecheck": "astro check",
+    "clean": "rm -rf dist .astro .cloudflare"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "15.0.0-beta.3",
+    "@astrojs/react": "^7.1.1",
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/azeret-mono": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource/yellowtail": "^5.3.0",
+    "@hugeicons/core-free-icons": "^4.3.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.4.2",
+    "astro-seo": "^1.2.0",
+    "astro-themes": "^0.2.7",
+    "cuelume": "^0.2.8",
+    "glimm-adapters": "workspace:*",
+    "lenis": "^1.3.27",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@takumi-rs/core": "^2.17.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "cf": "1.0.0-beta.21",
+    "oxc-transform-react": "^0.155.0",
+    "postcss": "^8.5.31",
+    "takumi-js": "^2.17.1",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "portless": {
+    "name": "glimm-adapters",
+    "script": "dev:app"
+  }
+}

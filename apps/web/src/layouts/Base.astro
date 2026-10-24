@@ -1,0 +1,66 @@
+---
+import { ClientRouter } from "astro:transitions";
+import PageRuntime from "../components/PageRuntime";
+import SiteHead from "../components/SiteHead.astro";
+
+type Props = {
+  title: string;
+  description: string;
+  noindex?: boolean;
+  image?: string;
+  imageAlt?: string;
+  /** Status pages opt into a plain arrival sweep; there is no cover to ride. */
+  sweepOnLoad?: boolean;
+};
+
+const {
+  title,
+  description,
+  noindex = false,
+  image,
+  imageAlt,
+  sweepOnLoad = false,
+} = Astro.props;
+
+const bodyClass =
+  "app min-h-screen bg-canvas font-sans text-[15px] leading-[1.7] text-body antialiased";
+---
+
+<!doctype html>
+<html lang="en" transition:animate="none">
+  <head>
+    <ClientRouter fallback="swap" />
+    <SiteHead
+      title={title}
+      description={description}
+      noindex={noindex}
+      image={image}
+      imageAlt={imageAlt}
+    />
+  </head>
+  <body class={bodyClass}>
+    <!-- The preview canvas: theme switches, easing demos, band previews. -->
+    <canvas id="app-page" transition:persist="app-page-canvas" aria-hidden="true"></canvas>
+
+    <!-- The navigation canvas. setupGlimmAstro moves it into a fixed host and
+         keeps it across swaps, so an in-flight sweep never loses its DOM. -->
+    <canvas id="glimm" transition:persist="glimm-canvas" aria-hidden="true"></canvas>
+
+    <slot />
+
+    <div class="app-fade app-fade--top" aria-hidden="true"></div>
+    <div class="app-fade app-fade--bottom" aria-hidden="true"></div>
+
+    <PageRuntime client:load sweepOnLoad={sweepOnLoad} />
+
+    <script>
+      import { navigate } from "astro:transitions/client";
+      import { setupGlimmAstro } from "glimm-adapters/astro";
+
+      const canvas = document.querySelector("#glimm");
+      if (canvas instanceof HTMLCanvasElement) {
+        setupGlimmAstro({ canvas, navigate, mode: "reveal" });
+      }
+    </script>
+  </body>
+</html>

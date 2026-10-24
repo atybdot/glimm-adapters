@@ -1,0 +1,67 @@
+---
+import { SEO } from "astro-seo";
+import Themes from "astro-themes";
+import manrope from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import azeret from "@fontsource-variable/azeret-mono/files/azeret-mono-latin-wght-normal.woff2?url";
+import yellowtail from "@fontsource/yellowtail/files/yellowtail-latin-400-normal.woff2?url";
+import { ogImage, ogImageAlt, twitterHandle } from "../lib/seo";
+import "../styles/app.css";
+
+type Props = {
+  title: string;
+  description: string;
+  /** Error and utility pages stay out of the index. */
+  noindex?: boolean;
+  /** Overrides the default share card, for pages with their own image. */
+  image?: string;
+  imageAlt?: string;
+};
+
+const {
+  title,
+  description,
+  noindex = false,
+  image = ogImage,
+  imageAlt = ogImageAlt,
+} = Astro.props;
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+<!-- Preload the three faces the page paints with, so the first frame is the
+     final one and the text never swaps under the reader. -->
+<link rel="preload" as="font" type="font/woff2" href={manrope} crossorigin />
+<link rel="preload" as="font" type="font/woff2" href={azeret} crossorigin />
+<link rel="preload" as="font" type="font/woff2" href={yellowtail} crossorigin />
+
+<SEO
+  title={title}
+  description={description}
+  noindex={noindex}
+  openGraph={{
+    basic: { title, type: "website", image },
+    optional: { description },
+    image: { url: image, width: 1200, height: 630, alt: imageAlt },
+  }}
+  twitter={{
+    card: "summary_large_image",
+    title,
+    description,
+    image,
+    imageAlt,
+    site: twitterHandle,
+  }}
+  extend={{
+    link: [
+      { rel: "icon", href: "/favicon.svg" },
+      { rel: "sitemap", href: "/sitemap-index.xml" },
+    ],
+    meta: [
+      { name: "theme-color", content: "#fcfcfc", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#101010", media: "(prefers-color-scheme: dark)" },
+    ],
+  }}
+/>
+
+<Themes />

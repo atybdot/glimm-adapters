@@ -1,0 +1,736 @@
+/* The site stylesheet: Tailwind-first, one token set.
+   Tokens live in `@theme`, so the markup is styled with utilities
+   (`bg-canvas`, `text-muted`, `border-line`, `rounded-control`). The
+   `@layer components` block below holds only what a utility cannot express:
+   the gradient-clipped wordmark, the sliding highlight, the accordion height
+   animation, the easing plot and the syntax token colours.
+
+   Radius scale — the one thing every surface shares. Reach for these and
+   nothing else, so a trigger tab and a card agree on their corners:
+     rounded-xs       6px   inline code, swatches
+     rounded-sm       8px   popover rows, small icon buttons
+     rounded-control 10px   buttons, segmented tracks, inputs, the dock
+     rounded-card    12px   cards, code blocks, popovers, tables
+     rounded-stage   18px   the live-demo stage
+     rounded-full           circles only (dots, avatars, progress rings) */
+
+@layer theme, base, components, utilities;
+
+@import "@fontsource-variable/manrope/index.css";
+@import "@fontsource-variable/azeret-mono/index.css";
+@import "@fontsource/yellowtail/400.css";
+@import "lenis/dist/lenis.css";
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* astro-themes writes `data-theme` on <html>. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans:
+    "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    "Azeret Mono Variable", ui-monospace, "SF Mono", "Fira Code", "Liberation Mono", monospace;
+  --font-script: "Yellowtail", "Manrope Variable", ui-rounded, cursive;
+
+  --color-canvas: #fcfcfc;
+  --color-surface: #ffffff;
+  --color-recess: #fafafa;
+  --color-ink: #171717;
+  --color-body: #262626;
+  --color-muted: #737373;
+  --color-faint: #a3a3a3;
+  --color-line: #e5e5e5;
+  --color-line-soft: #efefef;
+  --color-accent: #2e70ff;
+  --color-accent-soft: rgba(46, 112, 255, 0.14);
+  --color-ok: #16a34a;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-control: 10px;
+  --radius-card: 12px;
+  --radius-stage: 18px;
+
+  --ease-snap: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Tokens flip here. Unlayered, so it beats the layered `@theme` output. */
+[data-theme="dark"] {
+  --color-canvas: #101010;
+  --color-surface: #171717;
+  --color-recess: #1d1d1d;
+  --color-ink: #fafafa;
+  --color-body: #ededed;
+  --color-muted: #a3a3a3;
+  --color-faint: #6b6b6b;
+  --color-line: #2a2a2a;
+  --color-line-soft: #232323;
+  --color-accent: #7fa6ff;
+  --color-accent-soft: rgba(127, 166, 255, 0.18);
+  --color-ok: #4ade80;
+}
+
+/* Syntax and file-tint colours are plain variables, read by class rules that
+   cannot be utilities (they land inside server-rendered highlighted markup). */
+.app {
+  --ic-ts: #2e70ff;
+  --ic-html: #e2703a;
+  --ic-css: #8250df;
+  --ic-shell: #57606a;
+
+  --tok-kw: #cf222e;
+  --tok-str: #116329;
+  --tok-fn: #8250df;
+  --tok-num: #0550ae;
+  --tok-typ: #953800;
+  --tok-attr: #0550ae;
+  --tok-com: #6e7781;
+  --tok-pun: #8a8f98;
+  color-scheme: light;
+}
+
+[data-theme="dark"] .app {
+  --ic-ts: #6f9aff;
+  --ic-html: #f0883e;
+  --ic-css: #d2a8ff;
+  --ic-shell: #a3a3a3;
+
+  --tok-kw: #ff7b72;
+  --tok-str: #7ee787;
+  --tok-fn: #d2a8ff;
+  --tok-num: #79c0ff;
+  --tok-typ: #ffa657;
+  --tok-attr: #79c0ff;
+  --tok-com: #8b949e;
+  --tok-pun: #6e7681;
+  color-scheme: dark;
+}
+
+.app ::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+@layer base {
+  .app img,
+  .app svg {
+    display: block;
+    max-width: 100%;
+  }
+}
+
+@layer components {
+  /* ---------- wordmark: a glimm band clipped to the type ---------- */
+
+  .app-word {
+    font-family: var(--font-script);
+    font-size: 27px;
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  /* ---------- travelling highlight for segmented groups ---------- */
+
+  .app-pill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 0;
+    border-radius: 6px;
+    background: var(--color-ink);
+    pointer-events: none;
+    transition:
+      transform 220ms var(--ease-snap),
+      width 220ms var(--ease-snap),
+      height 220ms var(--ease-snap),
+      background-color 220ms var(--ease-snap);
+  }
+
+  /* Inside the demo mock the highlight is a quiet recess, not a solid ink. */
+  .app-pill--soft {
+    background: var(--color-recess);
+  }
+
+  /* Tab rows sit on a recessed track, so their highlight reads as a raised
+     surface. An ink fill would swallow the light logos on Astro and TanStack;
+     a surface with a hairline ring keeps every mark legible in both themes. */
+  .app-pill--raised {
+    background: var(--color-surface);
+    box-shadow:
+      inset 0 0 0 1px var(--color-line),
+      0 1px 2px rgb(0 0 0 / 0.06);
+  }
+
+  /* The dock label tweens between words: the old one leaves upward while the
+     new arrives from below. Width is driven from the component. */
+  .app-morph {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: left;
+    transition: width 220ms var(--ease-snap);
+  }
+
+  .app-morph > span {
+    display: inline-block;
+    white-space: nowrap;
+    transition:
+      opacity 220ms var(--ease-snap),
+      transform 220ms var(--ease-snap),
+      filter 220ms var(--ease-snap);
+  }
+
+  .app-morph > span.is-enter {
+    opacity: 0;
+    transform: translateY(60%);
+    filter: blur(3px);
+  }
+
+  .app-morph > span.is-exit {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    transform: translateY(-60%);
+    filter: blur(3px);
+  }
+
+  /* The React dock swaps the word; the entering span plays this on mount. */
+  .app-morph__in {
+    animation: app-label-in 220ms var(--ease-snap);
+  }
+
+  @keyframes app-label-in {
+    from {
+      opacity: 0;
+      transform: translateY(60%);
+      filter: blur(3px);
+    }
+  }
+
+  /* ---------- dock: the progress ring ---------- */
+
+  .app-dock__track {
+    stroke: var(--color-line);
+  }
+
+  .app-dock__bar {
+    stroke: var(--color-ink);
+    transition: stroke-dashoffset 120ms linear;
+  }
+
+  /* ---------- inline code inside prose ---------- */
+
+  .app :where(p, li, td) code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    padding: 0.1em 0.36em;
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-xs);
+    background: var(--color-recess);
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  /* ---------- copy button + icon crossfade ---------- */
+
+  .app-copy {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-faint);
+    cursor: pointer;
+    flex: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 150ms var(--ease-snap),
+      color 150ms var(--ease-snap),
+      transform 140ms var(--ease-snap);
+  }
+
+  .app-copy:hover:not(:disabled) {
+    color: var(--color-ink);
+    background: var(--color-recess);
+  }
+
+  .app-copy:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  .app-copy:disabled {
+    cursor: default;
+  }
+
+  .app-copy__icon {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      opacity 150ms var(--ease-snap),
+      transform 220ms var(--ease-snap),
+      filter 220ms var(--ease-snap);
+  }
+
+  .app-copy__check {
+    opacity: 0;
+    transform: scale(0.4);
+    filter: blur(2px);
+    color: var(--color-ok);
+  }
+
+  .app-copy.is-copied .app-copy__copy {
+    opacity: 0;
+    transform: scale(0.4);
+    filter: blur(2px);
+  }
+
+  .app-copy.is-copied .app-copy__check {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  /* ---------- faq accordion: grid-rows height, no JS measuring ---------- */
+
+  .app-acc__panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 320ms var(--ease-snap);
+  }
+
+  .app-acc__item[data-open="true"] .app-acc__panel {
+    grid-template-rows: 1fr;
+  }
+
+  .app-acc__inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-acc__body {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(3px);
+    transition:
+      opacity 220ms var(--ease-snap),
+      transform 220ms var(--ease-snap),
+      filter 220ms var(--ease-snap);
+  }
+
+  .app-acc__item[data-open="true"] .app-acc__body {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+
+  /* ---------- how it works: four moments over one band ---------- */
+
+  /* The clock writes the transform directly, once a frame, so it carries no
+     transition of its own. This is only the starting frame. The band is the
+     ember palette, sampled from the same cosine fit the shader uses. */
+  .app-how__band {
+    transform: translate3d(-100%, 0, 0);
+    will-change: transform;
+    background-image: linear-gradient(
+      90deg,
+      #ffbc01 0%,
+      #ffb404 25%,
+      #ff8c1b 50%,
+      #ff5b39 75%,
+      #ff3d4c 100%
+    );
+  }
+
+  /* Page A and Page B sit on top of each other; the swap happens under the
+     band. These transitions only show at the band's leading edge. */
+  .app-how__page {
+    opacity: 0;
+    transform: scale(0.992);
+    filter: blur(2px);
+    transition:
+      opacity 360ms var(--ease-smooth),
+      transform 460ms var(--ease-smooth),
+      filter 360ms var(--ease-smooth);
+  }
+
+  .app-how__page[data-on="true"] {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+
+  /* The rail fill and playhead are written per frame, so they carry no
+     transition of their own. */
+  .app-how__rail-fill {
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  .app-how__playhead {
+    left: 0;
+    will-change: left;
+  }
+
+  /* The band caption and the single note are remounted per phase, so they play
+     on arrival: a short rise out of blur, the same move everywhere. */
+  .app-how__label {
+    animation: app-how-label 260ms var(--ease-snap);
+  }
+
+  .app-how__note {
+    animation: app-how-label 320ms var(--ease-snap);
+  }
+
+  @keyframes app-how-label {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+      filter: blur(3px);
+    }
+  }
+
+  /* A changed number lands with a short pop, so the slider feels connected. */
+  .app-how__num {
+    animation: app-how-num 220ms var(--ease-snap);
+  }
+
+  @keyframes app-how-num {
+    from {
+      opacity: 0;
+      transform: translateY(3px) scale(0.96);
+      filter: blur(2px);
+    }
+  }
+
+  /* Waiting for the app to render: a soft sheen crosses the band, the way a
+     skeleton tells you work is still in flight. Only mounted in that phase. */
+  .app-how__sheen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.34) 50%,
+      transparent 80%
+    );
+    transform: translate3d(-100%, 0, 0);
+    animation: app-how-sheen 1200ms var(--ease-smooth) infinite;
+  }
+
+  @keyframes app-how-sheen {
+    to {
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+
+  /* After the base rules, so it actually wins the cascade. */
+  @media (prefers-reduced-motion: reduce) {
+    .app-how__page,
+    .app-how__label,
+    .app-how__note,
+    .app-how__num {
+      animation: none;
+      transition: none;
+    }
+
+    .app-how__sheen {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  /* ---------- easing graph: dot grid and the curves, nothing else ---------- */
+
+  .app-ease-plot {
+    background-image: radial-gradient(circle, var(--color-line) 1px, transparent 1.2px);
+    background-size: 12px 12px;
+    background-position: center;
+  }
+
+  /* All eight curves are stacked; the chosen one fades in over the rest. */
+  .app-ease-curve {
+    stroke: var(--color-ink);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    transition: opacity 240ms var(--ease-snap);
+  }
+
+  .app-ease-curve[data-active="true"] {
+    opacity: 1;
+  }
+
+  /* ---------- icon and label swaps ---------- */
+
+  /* Play/pause and similar. Both states sit in the same grid cell, so the
+     control keeps the width of the longer one and nothing beside it moves.
+     Values follow transitions.dev: 250ms ease-in-out, 2px blur, 0.25 scale. */
+  .app-iswap {
+    position: relative;
+    display: inline-grid;
+  }
+
+  .app-iswap > * {
+    grid-area: 1 / 1;
+    transition:
+      opacity 250ms ease-in-out,
+      filter 250ms ease-in-out,
+      transform 250ms ease-in-out;
+  }
+
+  .app-iswap > [data-on="false"] {
+    opacity: 0;
+    filter: blur(2px);
+    transform: scale(0.25);
+  }
+
+  /* Same idea for a short word: 150ms ease-in-out, 2px blur, 4px rise. */
+  .app-wswap {
+    position: relative;
+    display: inline-grid;
+  }
+
+  .app-wswap > * {
+    grid-area: 1 / 1;
+    transition:
+      opacity 150ms ease-in-out,
+      filter 150ms ease-in-out,
+      transform 150ms ease-in-out;
+  }
+
+  .app-wswap > [data-on="false"] {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(4px);
+  }
+
+  /* ---------- syntax tokens ---------- */
+
+  .t-kw {
+    color: var(--tok-kw);
+  }
+
+  .t-str {
+    color: var(--tok-str);
+  }
+
+  .t-fn {
+    color: var(--tok-fn);
+  }
+
+  .t-num {
+    color: var(--tok-num);
+  }
+
+  .t-typ {
+    color: var(--tok-typ);
+  }
+
+  .t-attr {
+    color: var(--tok-attr);
+  }
+
+  .t-com {
+    color: var(--tok-com);
+    font-style: italic;
+  }
+
+  .t-pun {
+    color: var(--tok-pun);
+  }
+
+  .t-tag {
+    color: var(--tok-kw);
+  }
+}
+
+/* The wordmark is a glimm band clipped to the type. Kept out of
+   `@layer components` on purpose: the `text-ink` utility also sets `color`,
+   and a layered rule loses to it, which paints the glyphs solid and hides the
+   gradient. Unlayered, `color: transparent` wins and the sweep shows.
+
+   The band is deliberately narrow and low-contrast: each stop is mixed toward
+   `--color-ink`, so on light the shine is a dark tint and on dark it is a faint
+   streak. Subtle by construction, not by opacity. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .app-word {
+    --glimpse-a: #ffbc01;
+    --glimpse-b: #ff8c1b;
+    --glimpse-c: #ff3d4c;
+    background-image: linear-gradient(
+      100deg,
+      var(--color-ink) 0%,
+      var(--color-ink) 38%,
+      var(--glimpse-a) 46%,
+      var(--glimpse-b) 52%,
+      var(--glimpse-c) 58%,
+      var(--color-ink) 66%,
+      var(--color-ink) 100%
+    );
+    background-size: 300% 100%;
+    background-position: 100% 50%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* The full-viewport canvas the theme switch and easing preview sweep across. */
+#app-page {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* The navigation canvas. setupGlimmAstro moves it into its own fixed host on
+   load, but styling it here keeps the pre-hydration frame inert and on top. */
+#glimm {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* The adapter owns the transition. Astro's default root crossfade would run
+   underneath it and hide the first half of the sweep, so cancel it even if a
+   page forgets `transition:animate="none"`. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* The 404 / 500 status number, in the wordmark's band colours. Unlayered for
+   the same reason as the wordmark: a `text-*` utility would paint it solid. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .app-status-code {
+    background-image: linear-gradient(100deg, #ffbc01 0%, #ff8c1b 48%, #ff3d4c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* The 500 keeps the same treatment, pushed past the ember into deep red so
+     the two states are told apart before the words are read. */
+  .app-status-code--error {
+    background-image: linear-gradient(100deg, #ff5b39 0%, #e01f3d 48%, #a80d2e 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app *,
+  .app *::before,
+  .app *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- range input ---------- */
+
+.app-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-line);
+  outline: none;
+}
+
+.app-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+}
+
+.app-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+}
+
+/* ---------- scroll fade overlays ---------- */
+
+.app-fade {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 36px;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.app-fade--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-canvas), transparent);
+}
+
+.app-fade--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-canvas), transparent);
+}
+
+/* ---------- demo card dot grid ---------- */
+
+.app-demo-grid {
+  background-image: radial-gradient(circle, var(--color-line) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+  background-position: center;
+}
+
+/* ---------- band width: the preview well ---------- */
+
+/* The band fades into the well toward the edges, so the middle of the preview
+   reads as a beam instead of a full-width wash. Mirrors the mask on glimm.dev,
+   in the surface tokens this page already uses. */
+.app-band-vignette {
+  background: radial-gradient(
+    ellipse 70% 78% at 50% 50%,
+    transparent 55%,
+    color-mix(in oklab, var(--color-recess) 72%, transparent) 82%,
+    var(--color-recess) 100%
+  );
+}
+
+/* ---------- acknowledgment ---------- */
+
+.app-ack {
+  margin-top: 2rem;
+}

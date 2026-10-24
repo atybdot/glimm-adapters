@@ -1,0 +1,14 @@
+---
+import { renderIcon, type HugeIcon } from "../lib/hugeicons";
+
+interface Props {
+  icon: HugeIcon;
+  size?: number;
+  strokeWidth?: number;
+  class?: string;
+}
+
+const { icon, size = 16, strokeWidth, class: className } = Astro.props;
+---
+
+<Fragment set:html={renderIcon(icon, { size, strokeWidth, class: className })} />

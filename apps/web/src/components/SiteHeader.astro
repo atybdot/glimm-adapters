@@ -1,0 +1,30 @@
+---
+import HeaderMenu from "./HeaderMenu";
+import Wordmark from "./Wordmark";
+import { wordmarkSweeps } from "../lib/wordmark";
+
+type Props = {
+  /** The page as markdown. Omitted on the error pages, which have no mirror. */
+  markdown?: string;
+  mdHref?: string;
+  chatGptHref?: string;
+  claudeHref?: string;
+  class?: string;
+};
+
+const { markdown, mdHref, chatGptHref, claudeHref, class: className = "mb-16" } = Astro.props;
+---
+
+<header
+  class={`relative z-40 flex min-h-9 items-center justify-between gap-4 ${className}`.trim()}
+>
+  <Wordmark client:idle sweeps={wordmarkSweeps} href="/" label="glimm-adapters" />
+
+  <HeaderMenu
+    client:idle
+    markdown={markdown}
+    mdHref={mdHref}
+    chatGptHref={chatGptHref}
+    claudeHref={claudeHref}
+  />
+</header>

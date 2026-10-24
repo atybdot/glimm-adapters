@@ -1,0 +1,135 @@
+{
+  "name": "glimm-adapters",
+  "version": "0.1.0",
+  "description": "Router adapters for glimm WebGL sweep transitions: TanStack Router, React, SvelteKit, Vue, Nuxt, Astro, and vanilla JS.",
+  "keywords": [
+    "astro",
+    "framework-agnostic",
+    "glimm",
+    "page-transition",
+    "sveltekit",
+    "tanstack-router",
+    "vue",
+    "webgl"
+  ],
+  "homepage": "https://github.com/atybdot/glimm-adapters#readme",
+  "bugs": {
+    "url": "https://github.com/atybdot/glimm-adapters/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "atyb",
+    "email": "hi@atyb.dev",
+    "url": "https://x.com/atybdot"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atybdot/glimm-adapters.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./tanstack": {
+      "types": "./dist/tanstack.d.ts",
+      "import": "./dist/tanstack.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte.d.ts",
+      "import": "./dist/svelte.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js"
+    },
+    "./astro": {
+      "types": "./dist/astro.d.ts",
+      "import": "./dist/astro.js"
+    },
+    "./vanilla": {
+      "types": "./dist/vanilla.d.ts",
+      "import": "./dist/vanilla.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "glimm": "^0.3.1"
+  },
+  "devDependencies": {
+    "@tanstack/react-router": "^1.170.46",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "jsdom": "^24.1.3",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.89.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "svelte": "^5.57.2",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
+    "vue": "^3.5.44",
+    "vue-router": "^4.6.4"
+  },
+  "peerDependencies": {
+    "@tanstack/react-router": ">=1",
+    "astro": ">=4",
+    "react": ">=18",
+    "svelte": ">=4",
+    "vue": ">=3",
+    "vue-router": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "vue-router": {
+      "optional": true
+    },
+    "astro": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

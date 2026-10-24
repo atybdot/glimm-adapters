@@ -1,0 +1,129 @@
+name: release
+
+# A `push.tags` filter has no branch scope: a `release-*` tag on any branch
+# triggers this workflow. The guard job below fails closed when the ref is not
+# reachable from the default branch.
+on:
+  push:
+    tags: ["release-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Require the ref to be on the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            "refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
+          if ! git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"; then
+            echo "::error::not publishing: ref is not on $DEFAULT_BRANCH"
+            exit 1
+          fi
+
+  publish:
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm --filter glimm-adapters test
+      - run: pnpm --filter glimm-adapters build
+
+      - name: Version metadata
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./packages/glimm-adapters/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "dist_tag=next" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+          PKG_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${TAG_VERSION#release-v}"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::tag $TAG_VERSION does not match package.json $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Require the branch tip for manual runs
+        if: github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$DEFAULT_BRANCH"
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$DEFAULT_BRANCH")" ]; then
+            echo "::error::manual publish must run from a release tag or the tip of $DEFAULT_BRANCH"
+            exit 1
+          fi
+
+      - name: Publish glimm-adapters
+        run: |
+          pnpm --filter glimm-adapters publish \
+            --access public \
+            --no-git-checks \
+            --tag "${{ steps.version.outputs.dist_tag }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Extract changelog entry
+        if: startsWith(github.ref, 'refs/tags/release-')
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#release-v}"
+          awk -v prefix="## $VERSION (" '
+            index($0, prefix) == 1 { found = 1 }
+            found && /^## / && index($0, prefix) != 1 { exit }
+            found { print }
+          ' packages/glimm-adapters/CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
+
+      - name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/release-')
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: ${{ runner.temp }}/release-notes.md
+          prerelease: ${{ steps.version.outputs.prerelease }}

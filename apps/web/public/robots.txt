@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://glimm-adapters.atyb.dev/sitemap-index.xml

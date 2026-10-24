@@ -2,3 +2,5 @@ node_modules
 dist
 .astro
 .turbo
+.cloudflare
+web-1

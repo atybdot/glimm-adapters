@@ -1,0 +1,13 @@
+---
+import StatusPage from "../components/StatusPage.astro";
+---
+
+<StatusPage
+  code="404"
+  title="This route never painted."
+  description="The page you asked for is not here. It may have moved, or the link that brought you here was never built. Head back and take another route."
+  actions={[
+    { href: "/", label: "Back home" },
+    { href: "/changelog", label: "Changelog" },
+  ]}
+/>

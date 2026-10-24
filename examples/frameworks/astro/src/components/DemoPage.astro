@@ -1,0 +1,30 @@
+---
+interface Props {
+  page: "home" | "about";
+}
+
+const { page } = Astro.props;
+---
+
+<div class="page" data-page={page}>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="mark"></span> glimm <span>/ Astro</span>
+    </a>
+    <nav>
+      <a href="/" aria-current={page === "home" ? "page" : undefined}>Home</a>
+      <a href="/about" aria-current={page === "about" ? "page" : undefined}>About</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <slot />
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>glimm-adapters / astro</span>
+    <span>setupGlimmAstro · mode: reveal</span>
+  </footer>
+</div>
