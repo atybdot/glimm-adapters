@@ -5,6 +5,7 @@ import vue from "@vitejs/plugin-vue";
 // so `pnpm dev:examples` opens on http://localhost:4603/.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/example/vue/" : "/",
+  publicDir: "../shared/public",
   plugins: [vue()],
   server: { port: 4603, strictPort: true },
   preview: { port: 4603, strictPort: true },
