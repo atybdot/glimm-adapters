@@ -1,6 +1,6 @@
 {
   "name": "glimm-adapters",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Router adapters for glimm WebGL sweep transitions: TanStack Router, React, SvelteKit, Vue, Nuxt, Astro, and vanilla JS.",
   "keywords": [
     "astro",

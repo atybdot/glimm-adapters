@@ -4,6 +4,43 @@ All notable changes to `glimm-adapters` are documented here. Releases are cut
 with `scripts/publish.mjs`, which owns the version bump, this changelog file and
 the `release-*` tag.
 
+## 1.0.0 (2026-10-24) · Add framework example apps
+
+### Added
+
+- Add framework example apps
+- Add the demo site
+- Scaffold the package
+- Add the framework adapters
+- Add intercept and covered tracking
+- Scaffold the package
+
+### Fixed
+
+- Vue test
+- Harden the release helper
+
+### Changed
+
+- Init
+
+### Internal
+
+- Bump Node.js to v26 for Astro compatibility
+- Rewrite README for glimm-adapters
+- Rework release helper for glimm-adapters
+- Harden verify and release workflows
+- Drop changesets and reconfigure root workspace
+- Add the release helper script
+- Cover intercept, covered, and astro
+- Add the pnpm lockfile
+- Add the tag-triggered release workflow
+- Add the verify workflow
+- Configure changesets
+- Add lefthook format and lint hooks
+- Add root scripts and the turbo pipeline
+- Ignore the web demo app
+
 ## 0.1.0 (2026-10-20) · Six routes, one engine
 
 One WebGL engine, six ways in. `glimm-adapters` 0.1.0 adds the adapter layer glimm does not ship: every router gets the same sweep, the same options, and the same skip rules, with no fork of the engine.
