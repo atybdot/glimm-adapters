@@ -262,7 +262,7 @@ pnpm dev:examples
 
 See `examples/frameworks/README.md` for what to look for and how to run one app at a time.
 
-The example apps build into the docs site under `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`) and ship in the same Cloudflare Worker as the rest of the site. The example builds still assume the site root, so deep links and asset URLs need a base path before the pages work end to end.
+The example apps build into the docs site under `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`) and ship in the same Cloudflare Worker as the rest of the site. Each Vite app sets its build base to `/example/<framework>/` and passes the same value to its router. Astro sets `base` in `astro.config.mjs`. Dev servers stay at the site root, so `pnpm dev:examples` still opens on `http://localhost:4601/` and friends.
 
 ## Demo app
 
@@ -308,6 +308,20 @@ pnpm publish:release -- patch   # 0.1.0 -> 0.1.1
 
 Write `release-notes/<version>.md` first to curate the entry; otherwise the script groups conventional commits since the last release tag. The script runs the full check suite, writes and format-checks the version and changelog, commits, tags, and pushes. CI publishes to npm and creates the GitHub release from the changelog entry, so the release appears only after the guard passes.
 
+npm publishing uses a short-lived OIDC credential, not a stored token. The package needs a one-time trusted publisher setup:
+
+```bash
+npm login
+npm trust github glimm-adapters \
+  --file release.yml \
+  --repo atybdot/glimm-adapters \
+  --allow-publish
+```
+
+The entry must name repository `atybdot/glimm-adapters` and workflow `release.yml`, with no environment. The workflow does not set `environment`, so a trust entry that asks for one will reject the token with `OIDC permission denied for this action`. Check existing entries with `npm trust list glimm-adapters` and revoke a stale one with `npm trust revoke glimm-adapters --id=<id>`.
+
+The GitHub release job does not wait for the npm publish. A registry failure leaves the notes on the tag instead of hiding them.
+
 - Pre-commit: lefthook auto-fixes format/lint on staged files, fails on the rest.
 - CI (`ci.yml`): format check, lint, typecheck, test, build on push/PR.
-- Publish (`release.yml`): the same checks, plus `pnpm publish`, only on manual dispatch or a `release-*` tag. Needs `NPM_TOKEN`. Prerelease versions publish under the `next` dist-tag.
+- Publish (`release.yml`): the same checks, plus `pnpm publish`, only on manual dispatch or a `release-*` tag. Uses the npm trusted publisher above. Prerelease versions publish under the `next` dist-tag.
