@@ -4,6 +4,12 @@ All notable changes to `glimm-adapters` are documented here. Releases are cut
 with `scripts/publish.mjs`, which owns the version bump, this changelog file and
 the `release-*` tag.
 
+## 1.1.0 (2026-10-25) · Build and deploy the framework examples with the docs site \(#2\)
+
+### Internal
+
+- Build and deploy the framework examples with the docs site \(#2\)
+
 ## 1.0.0 (2026-10-24) · Add framework example apps
 
 ### Added
