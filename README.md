@@ -318,6 +318,19 @@ npm trust github glimm-adapters \
   --allow-publish
 ```
 
+`npm trust` landed in npm 11.15.0. Older npm rejects the subcommand's arguments with `github is not a valid keyword`, so either upgrade or run it through npx:
+
+```bash
+npm install -g npm@^11.15.0
+# or leave the global install alone:
+npx -y npm@^11.15.0 trust github glimm-adapters \
+  --file release.yml \
+  --repo atybdot/glimm-adapters \
+  --allow-publish
+```
+
+`npm trust ... --dry-run` prints the entry it would write, which is the quickest way to confirm the package, file and repository before committing to it.
+
 The entry must name repository `atybdot/glimm-adapters` and workflow `release.yml`, with no environment. The workflow does not set `environment`, so a trust entry that asks for one will reject the token with `OIDC permission denied for this action`. Check existing entries with `npm trust list glimm-adapters` and revoke a stale one with `npm trust revoke glimm-adapters --id=<id>`.
 
 The GitHub release job does not wait for the npm publish. A registry failure leaves the notes on the tag instead of hiding them.
