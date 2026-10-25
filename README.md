@@ -262,7 +262,7 @@ pnpm dev:examples
 
 See `examples/frameworks/README.md` for what to look for and how to run one app at a time.
 
-Live versions of each app are published on the docs site at `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`), all served from the same Cloudflare Worker as the rest of the site. Each framework's own router is mounted at that path.
+The example apps build into the docs site under `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`) and ship in the same Cloudflare Worker as the rest of the site. The example builds still assume the site root, so deep links and asset URLs need a base path before the pages work end to end.
 
 ## Demo app
 
