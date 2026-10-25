@@ -262,7 +262,7 @@ pnpm dev:examples
 
 See `examples/frameworks/README.md` for what to look for and how to run one app at a time.
 
-Live versions of each app are published on the docs site at `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`), all served from the same Cloudflare Worker as the rest of the site. Each framework's own router is mounted at that path.
+The example apps build into the docs site under `/example/<framework>` (for example `/example/svelte`, `/example/vue`, `/example/astro`) and ship in the same Cloudflare Worker as the rest of the site. The example builds still assume the site root, so deep links and asset URLs need a base path before the pages work end to end.
 
 ## Demo app
 
@@ -279,6 +279,14 @@ pnpm --filter web build
 pnpm --filter web deploy
 ```
 
+To also ship the framework example apps under `/example/<framework>` on the same worker, stage them first:
+
+```bash
+pnpm build:web:full   # build:lib + build:examples + stage:examples + web build
+pnpm deploy:web:full  # same, then deploy
+```
+
+CI (`.github/workflows/deploy-web.yml`) runs the same pipeline on push to `main` (production deploy) and on pull requests (a preview worker via `cf previews deploy`). It needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
 The build renders the two share cards with Takumi and writes them to `public/og.png` and `public/og-changelog.png`. They are static files, so requests never render anything. To refresh them without a full build:
 
 ```bash

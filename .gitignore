@@ -4,3 +4,4 @@ dist
 .turbo
 .cloudflare
 web-1
+apps/web/public/example
