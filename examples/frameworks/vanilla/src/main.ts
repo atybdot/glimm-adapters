@@ -1,5 +1,6 @@
 import "@glimm-examples/shared/demo.css";
 import { setupGlimmVanilla } from "glimm-adapters/vanilla";
+import { toAppPath } from "./base";
 import { renderPage } from "./render";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -10,7 +11,7 @@ if (!app || !canvas) {
 }
 
 const paint = () => {
-  app.innerHTML = renderPage(window.location.pathname);
+  app.innerHTML = renderPage(toAppPath(window.location.pathname));
 };
 
 paint();

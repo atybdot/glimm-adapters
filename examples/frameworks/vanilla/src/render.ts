@@ -1,12 +1,14 @@
+import { appHref } from "./base";
+
 const shell = (page: "home" | "about", body: string) => {
   const isAbout = page === "about";
   return `
     <div class="page" data-page="${page}">
       <header class="topbar">
-        <a class="brand" href="/"><span class="mark"></span> glimm <span>/ vanilla</span></a>
+        <a class="brand" href="${appHref("/")}"><span class="mark"></span> glimm <span>/ vanilla</span></a>
         <nav>
-          <a href="/" ${isAbout ? "" : 'aria-current="page"'}>Home</a>
-          <a href="/about" ${isAbout ? 'aria-current="page"' : ""}>About</a>
+          <a href="${appHref("/")}" ${isAbout ? "" : 'aria-current="page"'}>Home</a>
+          <a href="${appHref("/about")}" ${isAbout ? 'aria-current="page"' : ""}>About</a>
         </nav>
       </header>
       <main>
@@ -30,7 +32,7 @@ const home = `
     swaps the view. The canvas stays put; only the page changes.
   </p>
   <div class="actions">
-    <a class="button" href="/about">Open the About page <span aria-hidden="true">→</span></a>
+    <a class="button" href="${appHref("/about")}">Open the About page <span aria-hidden="true">→</span></a>
   </div>
   <div class="card">
     <div>
@@ -50,7 +52,7 @@ const about = `
     survived the swap, so a second navigation starts from a clean state.
   </p>
   <div class="actions">
-    <a class="button" href="/">Back to the Home page <span aria-hidden="true">→</span></a>
+    <a class="button" href="${appHref("/")}">Back to the Home page <span aria-hidden="true">→</span></a>
   </div>
   <div class="card">
     <div>

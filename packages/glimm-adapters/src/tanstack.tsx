@@ -23,6 +23,20 @@ export type {
   SweepOptions,
 } from "glimm/react";
 
+/**
+ * `interceptLinks` reports `url.pathname + search + hash`, which includes the
+ * deployed basepath. `router.navigate` prepends `basepath` itself, so strip it
+ * first or `/docs/app/about` lands on `/docs/app/docs/app/about`.
+ */
+function withoutBasepath(basepath: string, href: string): string {
+  if (basepath === "/" || !href.startsWith(basepath)) return href;
+  const rest = href.slice(basepath.length);
+  if (!rest) return "/";
+  if (rest.startsWith("/")) return rest;
+  if (rest.startsWith("?") || rest.startsWith("#")) return `/${rest}`;
+  return href;
+}
+
 export type TransitionLinkProps = LinkComponentProps<"a"> & {
   /** Per-link sweep overrides (palette, direction, duration…). */
   sweep?: SweepOptions;
@@ -87,10 +101,11 @@ export const TransitionLink = forwardRef<HTMLAnchorElement, TransitionLinkProps>
         } else {
           // Fall back to the clicked href. Pass it as a single `to` so
           // search/hash are not supplied twice.
+          const target = withoutBasepath(router.basepath, url.pathname + url.search + url.hash);
           sweep(
             () =>
               router.navigate({
-                to: (url.pathname + url.search + url.hash) as string,
+                to: target,
                 replace,
               }),
             sweepOpts,
@@ -107,7 +122,10 @@ export const TransitionLink = forwardRef<HTMLAnchorElement, TransitionLinkProps>
             replace,
           });
         } else {
-          void router.navigate({ to: (url.pathname + url.search + url.hash) as string, replace });
+          void router.navigate({
+            to: withoutBasepath(router.basepath, url.pathname + url.search + url.hash),
+            replace,
+          });
         }
       }
     };
@@ -225,7 +243,11 @@ export function InterceptLinks(props: InterceptLinksOptions): null {
   useEffect(() => {
     // `navigate` returns a promise that resolves after the route loads, so
     // glimm's commit holds the curtain until the new page has rendered.
-    return interceptLinks(sweep, (href) => router.navigate({ to: href }), props);
+    return interceptLinks(
+      sweep,
+      (href) => router.navigate({ to: withoutBasepath(router.basepath, href) }),
+      props,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, sweep, props.sweep, props.shouldIntercept]);
   return null;

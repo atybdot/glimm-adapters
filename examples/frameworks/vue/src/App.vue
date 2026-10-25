@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { setupGlimmVue, type VueSweepApi } from "glimm-adapters/vue";
+import { stripBase } from "./router";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const route = useRoute();
@@ -12,12 +13,14 @@ const page = computed(() => (route.path === "/about" ? "about" : "home"));
 // Vue has patched the DOM. The adapter waits for the next paint after this
 // promise resolves, so a tick here is enough.
 const sweepRouter = {
+  // The interceptor reports the full pathname, base included. vue-router
+  // resolves routes against the base, so hand it the path inside the router.
   push: async (href: string) => {
-    await router.push(href);
+    await router.push(stripBase(href));
     await nextTick();
   },
   replace: async (href: string) => {
-    await router.replace(href);
+    await router.replace(stripBase(href));
     await nextTick();
   },
 };

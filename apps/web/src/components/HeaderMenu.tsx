@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  BrowserIcon,
   ChatGptIcon,
   ClaudeIcon,
   Copy01Icon,
@@ -279,6 +280,10 @@ export default function HeaderMenu({ markdown, mdHref, chatGptHref, claudeHref }
 
         <Separator />
 
+        <a href="/#examples" role="menuitem" className={itemClass}>
+          <Glyph icon={BrowserIcon} size={16} className="text-muted" />
+          Live examples
+        </a>
         <a
           href="https://github.com/atybdot/glimm-adapters"
           target="_blank"

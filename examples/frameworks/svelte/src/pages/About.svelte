@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { appHref } from "../router";
+</script>
+
 <p class="eyebrow">Second page · Svelte</p>
 <h1>
   New page.<br />
@@ -8,7 +12,7 @@
   a second navigation starts from a clean state.
 </p>
 <div class="actions">
-  <a class="button" href="/">Back to the Home page <span aria-hidden="true">→</span></a>
+  <a class="button" href={appHref("/")}>Back to the Home page <span aria-hidden="true">→</span></a>
 </div>
 <div class="card">
   <div>

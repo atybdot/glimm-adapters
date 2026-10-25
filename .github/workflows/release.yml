@@ -36,10 +36,44 @@ jobs:
             exit 1
           fi
 
+  # Independent of `publish` on purpose: the tag exists before either job
+  # runs, so the GitHub release should exist even when the registry rejects
+  # the upload.
+  github-release:
+    needs: guard
+    if: startsWith(github.ref, 'refs/tags/release-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Extract changelog entry
+        id: notes
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#release-v}"
+          awk -v prefix="## $VERSION (" '
+            index($0, prefix) == 1 { found = 1 }
+            found && /^## / && index($0, prefix) != 1 { exit }
+            found { print }
+          ' packages/glimm-adapters/CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: ${{ runner.temp }}/release-notes.md
+          prerelease: ${{ steps.notes.outputs.prerelease }}
+
   publish:
     needs: guard
     runs-on: ubuntu-latest
-    environment: npm
     steps:
       - uses: actions/checkout@v7
         with:
@@ -47,11 +81,13 @@ jobs:
 
       - uses: pnpm/action-setup@v6
 
+      # No `registry-url`: that option writes `_authToken=${NODE_AUTH_TOKEN}`
+      # into .npmrc, and an empty NODE_AUTH_TOKEN makes npm log a config
+      # warning before pnpm switches to the OIDC exchange.
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
@@ -68,10 +104,8 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [[ "$VERSION" == *-* ]]; then
             echo "dist_tag=next" >> "$GITHUB_OUTPUT"
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check tag matches package version
@@ -99,6 +133,10 @@ jobs:
             exit 1
           fi
 
+      # No token. `id-token: write` above lets pnpm exchange the GitHub OIDC
+      # token for a short-lived npm credential. The npm trusted publisher must
+      # name this repository and this workflow file (release.yml); see the
+      # Release section in README.md.
       - name: Publish glimm-adapters
         run: |
           pnpm --filter glimm-adapters publish \
@@ -106,24 +144,4 @@ jobs:
             --no-git-checks \
             --tag "${{ steps.version.outputs.dist_tag }}"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
-
-      - name: Extract changelog entry
-        if: startsWith(github.ref, 'refs/tags/release-')
-        run: |
-          set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#release-v}"
-          awk -v prefix="## $VERSION (" '
-            index($0, prefix) == 1 { found = 1 }
-            found && /^## / && index($0, prefix) != 1 { exit }
-            found { print }
-          ' packages/glimm-adapters/CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
-          test -s "$RUNNER_TEMP/release-notes.md"
-
-      - name: GitHub release
-        if: startsWith(github.ref, 'refs/tags/release-')
-        uses: softprops/action-gh-release@v3
-        with:
-          body_path: ${{ runner.temp }}/release-notes.md
-          prerelease: ${{ steps.version.outputs.prerelease }}
+          NPM_CONFIG_PROVENANCE: "true"

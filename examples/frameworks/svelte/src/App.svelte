@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { setupGlimm } from "glimm-adapters/svelte";
-  import { goto, path } from "./router";
+  import { appHref, goto, path, toAppPath } from "./router";
   import About from "./pages/About.svelte";
   import Home from "./pages/Home.svelte";
 
@@ -9,7 +9,7 @@
 
   onMount(() => {
     const glimm = setupGlimm({ canvas, goto, mode: "reveal" });
-    const onPop = () => path.set(window.location.pathname);
+    const onPop = () => path.set(toAppPath(window.location.pathname));
     window.addEventListener("popstate", onPop);
 
     return () => {
@@ -24,12 +24,12 @@
 
 <div class="page" data-page={$path === "/about" ? "about" : "home"}>
   <header class="topbar">
-    <a class="brand" href="/">
+    <a class="brand" href={appHref("/")}>
       <span class="mark"></span> glimm <span>/ Svelte</span>
     </a>
     <nav>
-      <a href="/" aria-current={$path === "/about" ? undefined : "page"}>Home</a>
-      <a href="/about" aria-current={$path === "/about" ? "page" : undefined}>About</a>
+      <a href={appHref("/")} aria-current={$path === "/about" ? undefined : "page"}>Home</a>
+      <a href={appHref("/about")} aria-current={$path === "/about" ? "page" : undefined}>About</a>
     </nav>
   </header>
 
