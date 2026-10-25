@@ -4,16 +4,18 @@ interface Props {
 }
 
 const { page } = Astro.props;
+// Astro trims the trailing slash from `base`, so add it back for the links.
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
 ---
 
 <div class="page" data-page={page}>
   <header class="topbar">
-    <a class="brand" href="/">
+    <a class="brand" href={base}>
       <span class="mark"></span> glimm <span>/ Astro</span>
     </a>
     <nav>
-      <a href="/" aria-current={page === "home" ? "page" : undefined}>Home</a>
-      <a href="/about" aria-current={page === "about" ? "page" : undefined}>About</a>
+      <a href={base} aria-current={page === "home" ? "page" : undefined}>Home</a>
+      <a href={`${base}about`} aria-current={page === "about" ? "page" : undefined}>About</a>
     </nav>
   </header>
 

@@ -20,6 +20,7 @@ export const agentPrompt = `Add glimm-adapters page transitions to my project. R
 
 export function pageMarkdown(): string {
   const adapterLines = frameworks.map((f) => `- ${f.name} (\`${f.pkg}\`): ${f.exports}`);
+  const exampleLines = frameworks.map((f) => `- ${f.name}: ${SITE}/example/${f.id}/`);
 
   const triggerLines = triggers.flatMap((t) => [
     `### ${t.name}`,
@@ -84,6 +85,12 @@ export function pageMarkdown(): string {
     "## Adapters",
     "",
     ...adapterLines,
+    "",
+    "## Live examples",
+    "",
+    "Each adapter runs in a small app served from this site. The source lives in `examples/frameworks`.",
+    "",
+    ...exampleLines,
     "",
     "## API",
     "",

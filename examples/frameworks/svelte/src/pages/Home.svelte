@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { appHref } from "../router";
+</script>
+
 <p class="eyebrow">Framework demo · Svelte</p>
 <h1>
   Sweep in.<br />
@@ -8,7 +12,7 @@
   canvas stays put; only the page changes.
 </p>
 <div class="actions">
-  <a class="button" href="/about">Open the About page <span aria-hidden="true">→</span></a>
+  <a class="button" href={appHref("/about")}>Open the About page <span aria-hidden="true">→</span></a>
 </div>
 <div class="card">
   <div>

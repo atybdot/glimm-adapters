@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useLocation } from "@tanstack/react-router";
+import { appHref } from "./base";
 
 export function Shell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
@@ -8,14 +9,14 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="page" data-page={page}>
       <header className="topbar">
-        <a className="brand" href="/">
+        <a className="brand" href={appHref("/")}>
           <span className="mark" /> glimm <span>/ TanStack</span>
         </a>
         <nav>
-          <a href="/" aria-current={page === "home" ? "page" : undefined}>
+          <a href={appHref("/")} aria-current={page === "home" ? "page" : undefined}>
             Home
           </a>
-          <a href="/about" aria-current={page === "about" ? "page" : undefined}>
+          <a href={appHref("/about")} aria-current={page === "about" ? "page" : undefined}>
             About
           </a>
         </nav>
@@ -45,7 +46,7 @@ export function HomePage() {
         canvas stays put; only the page changes.
       </p>
       <div className="actions">
-        <a className="button" href="/about">
+        <a className="button" href={appHref("/about")}>
           Open the About page <span aria-hidden="true">→</span>
         </a>
       </div>
@@ -77,7 +78,7 @@ export function AboutPage() {
         so a second navigation starts from a clean state.
       </p>
       <div className="actions">
-        <a className="button" href="/">
+        <a className="button" href={appHref("/")}>
           Back to the Home page <span aria-hidden="true">→</span>
         </a>
       </div>

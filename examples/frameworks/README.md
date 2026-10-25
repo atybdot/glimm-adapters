@@ -33,6 +33,9 @@ pnpm build:examples
 pnpm --filter @glimm-examples/react preview
 ```
 
+Builds use `/example/<framework>/` as their base, matching the docs site. Preview serves the app at
+<http://localhost:4602/example/react/>. Dev keeps the root, so `pnpm dev:examples` is unchanged.
+
 ## What to check
 
 - Click **About** and then **Home**. The page should swap exactly once per click.

@@ -106,6 +106,7 @@ const dockItems = [
   { id: "triggers", label: "Triggers" },
   { id: "install", label: "Install" },
   { id: "adapters", label: "Adapters" },
+  { id: "examples", label: "Live examples" },
   { id: "api", label: "API" },
   { id: "options", label: "Options" },
   { id: "easing", label: "Easing" },
@@ -273,6 +274,58 @@ const claudeHref = `https://claude.ai/new?q=${encodeURIComponent(agentPrompt)}`;
             label="Adapter"
             size="md"
           />
+        </section>
+
+        <!-- ---------- live examples ---------- -->
+        <section class={section} id="examples">
+          <h2 class={h2}>Live examples</h2>
+          <p class={p}>
+            Every adapter runs in a small app built from this repository. They ship in the same
+            worker as this page, so the demo you open is the adapter you install. Each app has two
+            pages and one canvas that survives the swap.
+          </p>
+
+          <ul
+            class="mt-6 grid list-none gap-px overflow-hidden rounded-card border border-line bg-line p-0 sm:grid-cols-2"
+          >
+            {
+              frameworks.map((fw) => (
+                <li class="bg-surface">
+                  <a
+                    class="group flex items-center gap-3 p-4 no-underline transition-colors duration-150 ease-snap hover:bg-recess focus-visible:bg-recess focus-visible:outline-none"
+                    href={`/example/${fw.id}/`}
+                  >
+                    <span class="flex size-8 shrink-0 items-center justify-center rounded-control border border-line bg-recess">
+                      <img src={fw.logo.light} alt="" width={16} height={16} class="size-4 dark:hidden" />
+                      <img
+                        src={fw.logo.dark}
+                        alt=""
+                        width={16}
+                        height={16}
+                        class="hidden size-4 dark:block"
+                      />
+                    </span>
+                    <span class="flex-1">
+                      <span class="block text-[13.5px] font-medium text-ink">{fw.name}</span>
+                      <span class="block text-[12.5px] text-muted">/example/{fw.id}</span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      class="text-muted transition-transform duration-150 ease-snap group-hover:translate-x-0.5"
+                    >
+                      →
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+          <p class={p}>
+            Prefer the source? Each app lives in
+            <a class={link} href="https://github.com/atybdot/glimm-adapters/tree/main/examples/frameworks"
+              >examples/frameworks</a
+            >, or run them all locally with <code>pnpm dev:examples</code>.
+          </p>
         </section>
 
         <!-- ---------- api ---------- -->
