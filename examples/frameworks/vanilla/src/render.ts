@@ -1,69 +1,137 @@
+import {
+  agentPrompt,
+  demos,
+  frameworks,
+  frameworkHref,
+  SWEEP_MS,
+} from "@glimm-examples/shared/demo-data";
 import { appHref } from "./base";
 
-const shell = (page: "home" | "about", body: string) => {
-  const isAbout = page === "about";
+const demo = demos.vanilla;
+const logo = appHref(`/${demo.logo}`);
+const base = import.meta.env.BASE_URL;
+
+/** The snippet is injected as HTML, so escape it before it reaches the page. */
+const escape = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const copyIcon = `
+  <svg class="copy__copy" viewBox="0 0 16 16" width="15" height="15" fill="none"
+    stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="6" y="6" width="8" height="8" rx="1.5" />
+    <path d="M10 6V3.5A1.5 1.5 0 0 0 8.5 2h-5A1.5 1.5 0 0 0 2 3.5v5A1.5 1.5 0 0 0 3.5 10H6" />
+  </svg>
+  <svg class="copy__check" viewBox="0 0 16 16" width="15" height="15" fill="none"
+    stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m3 8.5 3.2 3L13 4.5" />
+  </svg>
+`;
+
+const chevron = `
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m3 4.5 3 3 3-3" />
+  </svg>
+`;
+
+const options = frameworks
+  .map(
+    (framework) =>
+      `<option value="${frameworkHref(base, framework.id)}"${
+        framework.id === demo.id ? " selected" : ""
+      }>${framework.name}</option>`,
+  )
+  .join("");
+
+const bar = `
+  <header class="bar">
+    <a class="wordmark" href="${appHref("/")}" aria-label="glimm-adapters home">glimm-adapters</a>
+    <span class="slash" aria-hidden="true">/</span>
+    <label class="picker">
+      <span class="sr-only">Framework</span>
+      <select name="framework" data-framework>
+        ${options}
+      </select>
+      ${chevron}
+    </label>
+  </header>
+`;
+
+type Page = "sweep" | "wiring" | "prompt";
+
+const switcher = (page: Page) => {
+  const tabs = [
+    { id: "sweep", label: "Sweep", href: appHref("/") },
+    { id: "wiring", label: "Wiring", href: appHref("/about") },
+    { id: "prompt", label: "Prompt", href: appHref("/prompt") },
+  ] as const;
+
   return `
-    <div class="page" data-page="${page}">
-      <header class="topbar">
-        <a class="brand" href="${appHref("/")}"><span class="mark"></span> glimm <span>/ vanilla</span></a>
-        <nav>
-          <a href="${appHref("/")}" ${isAbout ? "" : 'aria-current="page"'}>Home</a>
-          <a href="${appHref("/about")}" ${isAbout ? 'aria-current="page"' : ""}>About</a>
-        </nav>
-      </header>
-      <main>
-        <section class="hero">
-          ${body}
-        </section>
-      </main>
-      <footer class="footer">
-        <span>glimm-adapters / vanilla</span>
-        <span>Reveal sweep · one pass</span>
-      </footer>
-    </div>
-  `;
+  <nav class="switcher" aria-label="Demo pages">
+    ${tabs
+      .map((tab) =>
+        tab.id === page
+          ? `<span class="switch" aria-current="page">${tab.label}</span>`
+          : `<a class="switch" href="${tab.href}">${tab.label}</a>`,
+      )
+      .join("")}
+  </nav>
+`;
 };
 
-const home = `
-  <p class="eyebrow">Framework demo · Vanilla JS</p>
-  <h1>Sweep in.<br /><em>Land on the next view.</em></h1>
-  <p class="lede">
-    This is page A. Click the link and watch the band cross while the router
-    swaps the view. The canvas stays put; only the page changes.
-  </p>
-  <div class="actions">
-    <a class="button" href="${appHref("/about")}">Open the About page <span aria-hidden="true">→</span></a>
-  </div>
-  <div class="card">
-    <div>
-      <p class="eyebrow">Current page</p>
-      <p class="card-title">Page A · Home</p>
-      <p class="card-note">The plain router is 30 lines. No framework, no magic.</p>
-    </div>
-    <div class="big">A</div>
-  </div>
+const code = (text: string, label: string, prose = false) => `
+  <figure class="code${prose ? " code--prose" : ""}">
+    <figcaption class="code-head">
+      <span>${label}</span>
+      <button type="button" class="copy" data-copy aria-label="Copy">
+        ${copyIcon}
+      </button>
+    </figcaption>
+    <pre><code>${escape(text)}</code></pre>
+  </figure>
 `;
 
-const about = `
-  <p class="eyebrow">Second page · Vanilla JS</p>
-  <h1>New page.<br /><em>Same canvas.</em></h1>
-  <p class="lede">
-    This is page B. The sweep committed the route at its midpoint. The canvas
-    survived the swap, so a second navigation starts from a clean state.
-  </p>
-  <div class="actions">
-    <a class="button" href="${appHref("/")}">Back to the Home page <span aria-hidden="true">→</span></a>
-  </div>
-  <div class="card">
-    <div>
-      <p class="eyebrow">Current page</p>
-      <p class="card-title">Page B · About</p>
-      <p class="card-note">Navigate back and forth; the transition should feel identical.</p>
-    </div>
-    <div class="big">B</div>
-  </div>
+const wiringCode = code(demo.code, demo.file);
+const promptCode = code(agentPrompt(demo), "agent prompt", true);
+
+const footer = (sweepMs: number) => `
+  <footer class="foot">
+    <label class="duration">
+      <span>duration</span>
+      <input
+        type="range"
+        min="${SWEEP_MS.min}"
+        max="${SWEEP_MS.max}"
+        step="${SWEEP_MS.step}"
+        value="${sweepMs}"
+      />
+      <output>${sweepMs} ms</output>
+    </label>
+  </footer>
 `;
 
-export function renderPage(pathname: string): string {
-  return pathname === "/about" ? shell("about", about) : shell("home", home);
+export function renderPage(path: string, sweepMs: number): string {
+  const page: Page = path === "/about" ? "wiring" : path === "/prompt" ? "prompt" : "sweep";
+
+  return `
+    <div class="page" style="--accent: ${demo.accent}">
+      <a class="skip" href="#main">Skip to content</a>
+      ${bar}
+      <main class="stage" id="main">
+        <div class="fw-card">
+          <img src="${logo}" alt="" width="52" height="52" />
+          <h1>${demo.name}</h1>
+        </div>
+        ${switcher(page)}
+        ${
+          page === "wiring"
+            ? wiringCode
+            : page === "prompt"
+              ? promptCode
+              : `<p class="line">${demo.line}</p>`
+        }
+      </main>
+      ${footer(sweepMs)}
+    </div>
+  `;
 }

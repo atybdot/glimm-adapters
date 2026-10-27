@@ -18,7 +18,10 @@ export function toAppPath(pathname: string): string {
   if (!base || !pathname.startsWith(base)) return pathname;
   const rest = pathname.slice(base.length);
   if (!rest) return "/";
-  return rest.startsWith("/") ? rest : pathname;
+  if (!rest.startsWith("/")) return pathname;
+  // The static host serves `/about/` for `/about`. Match one shape so direct
+  // URLs and in-app links resolve to the same route.
+  return rest.replace(/\/+$/, "") || "/";
 }
 
 export const path = writable(toAppPath(window.location.pathname));

@@ -5,8 +5,8 @@ const root = resolve(process.cwd());
 const examplesRoot = join(root, "examples", "frameworks");
 const targetRoot = join(root, "apps", "web", "public", "example");
 
-// SPA frameworks need an index.html copy at /about so a hard refresh on
-// /example/<fw>/about (a client-side route) still serves the shell.
+// SPA frameworks need an index.html copy per client-side route so a hard
+// refresh on /example/<fw>/about (or /prompt) still serves the shell.
 const spaFrameworks = new Set(["react", "vue", "svelte", "tanstack", "vanilla"]);
 
 const frameworks = ["vanilla", "react", "vue", "svelte", "tanstack", "astro"];
@@ -24,9 +24,11 @@ for (const fw of frameworks) {
   mkdirSync(dest, { recursive: true });
   cpSync(src, dest, { recursive: true });
   if (spaFrameworks.has(fw)) {
-    const aboutDir = join(dest, "about");
-    mkdirSync(aboutDir, { recursive: true });
-    copyFileSync(join(dest, "index.html"), join(aboutDir, "index.html"));
+    for (const route of ["about", "prompt"]) {
+      const dir = join(dest, route);
+      mkdirSync(dir, { recursive: true });
+      copyFileSync(join(dest, "index.html"), join(dir, "index.html"));
+    }
   }
   console.log(`[stage-examples] staged ${fw} -> ${dest}`);
 }

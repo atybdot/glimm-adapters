@@ -1,23 +1,35 @@
 /*
- * Shared chrome for the framework playground.
+ * Shared chrome for the framework demos.
  *
- * Every app renders the same two pages, so the only thing that changes is the
- * transition. Keep the background a solid colour: covered mode samples the
- * body colour for its curtain, and a gradient would sample as a mismatched
- * solid.
+ * One page shape for every framework: wordmark and a framework picker at the
+ * top, the framework's logo in a card, two tab-buttons, then either the sweep
+ * (home) or the wiring snippet (about). The page is dark on purpose: the band
+ * reads best on a near-black ground, and covered mode samples the body colour.
  */
+
+@import "@fontsource-variable/manrope/index.css";
+@import "@fontsource-variable/azeret-mono/index.css";
+@import "@fontsource/yellowtail/400.css";
 
 :root {
   color-scheme: dark;
-  --bg: #08080d;
-  --ink: #f7f5ff;
-  --muted: #a9a3bd;
-  --line: rgba(255, 255, 255, 0.13);
-  --card: rgba(19, 18, 30, 0.74);
-  --home: #a78bfa;
-  --about: #f9a8d4;
-  font-family:
-    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: #07070b;
+  --ink: #f6f4ff;
+  --body: #dedbea;
+  --muted: #9d98ad;
+  --faint: #6f6a80;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-soft: rgba(255, 255, 255, 0.07);
+  --surface: #0f0f16;
+  --accent: #58c4dc;
+  --font-sans:
+    "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    "Azeret Mono Variable", ui-monospace, "SF Mono", "Fira Code", "Liberation Mono", monospace;
+  --font-logo: "Yellowtail", "Manrope Variable", ui-rounded, cursive;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -27,295 +39,393 @@
 }
 
 html {
-  min-height: 100%;
   background: var(--bg);
+  min-height: 100%;
 }
 
 body {
-  margin: 0;
-  min-height: 100dvh;
   background: var(--bg);
   color: var(--ink);
+  margin: 0;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
 }
 
-.backdrop {
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(70% 55% at 12% 0%, rgba(139, 92, 246, 0.23), transparent 62%),
-    radial-gradient(60% 50% at 88% 12%, rgba(244, 114, 182, 0.16), transparent 60%),
-    radial-gradient(55% 45% at 50% 105%, rgba(56, 189, 248, 0.12), transparent 65%);
-}
-
-/* Adapter-owned canvases are fixed overlays. The React and TanStack providers
+/* Adapter-owned canvases are fixed overlays. React and TanStack providers
    inject their own host, so this only matters for the DOM canvases. */
 #glimm {
+  height: 100%;
+  inset: 0;
   pointer-events: none;
   position: fixed;
-  inset: 0;
   width: 100%;
-  height: 100%;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--ink);
+}
+
+:where(a, button, input, select, [tabindex]):focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.skip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  left: 16px;
+  padding: 8px 12px;
+  position: fixed;
+  text-decoration: none;
+  top: 16px;
+  transform: translateY(-180%);
+  transition: transform 160ms var(--ease);
+  z-index: 20;
+}
+
+.skip:focus {
+  transform: none;
 }
 
 .page {
-  --accent: var(--home);
   display: flex;
   flex-direction: column;
+  margin-inline: auto;
+  max-width: 1180px;
   min-height: 100dvh;
-  padding: 28px clamp(20px, 5vw, 64px) 24px;
-}
-
-.page[data-page="about"] {
-  --accent: var(--about);
-}
-
-.topbar {
-  align-items: center;
-  display: flex;
-  gap: 20px;
-  justify-content: space-between;
-  margin: 0 auto;
-  max-width: 1120px;
+  padding: 22px clamp(20px, 4vw, 40px) 24px;
   width: 100%;
 }
 
-.brand {
-  align-items: center;
+/* ---------- top bar ---------- */
+
+.bar {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.wordmark {
   color: var(--ink);
+  font-family: var(--font-logo);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.slash {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.picker {
+  align-items: center;
   display: inline-flex;
-  font-size: 15px;
-  font-weight: 720;
-  gap: 10px;
-  letter-spacing: -0.02em;
-  text-decoration: none;
+  position: relative;
 }
 
-.brand span {
-  color: var(--muted);
-  font-weight: 500;
+.picker select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--body);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 18px 2px 0;
+  transition: color 140ms var(--ease);
 }
 
-.mark {
-  background: linear-gradient(135deg, #8b5cf6, #f472b6 55%, #38bdf8);
-  border-radius: 10px;
-  box-shadow: 0 0 28px rgba(139, 92, 246, 0.36);
-  display: inline-block;
-  height: 32px;
-  width: 32px;
-}
-
-nav {
-  backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-}
-
-nav a {
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 15px;
-  text-decoration: none;
-  transition:
-    background 160ms ease,
-    color 160ms ease;
-}
-
-nav a:hover {
+.picker select:hover {
   color: var(--ink);
 }
 
-nav a[aria-current="page"] {
-  background: rgba(255, 255, 255, 0.1);
+/* Native popups ignore the select's own colours. Set the options explicitly
+   so the list is not light text on a white sheet. */
+.picker option {
+  background: var(--surface);
   color: var(--ink);
 }
 
-main {
+.picker svg {
+  color: var(--faint);
+  height: 12px;
+  pointer-events: none;
+  position: absolute;
+  right: 2px;
+  width: 12px;
+}
+
+/* ---------- stage ---------- */
+
+.stage {
   align-items: center;
-  display: grid;
+  display: flex;
   flex: 1;
-  margin: 0 auto;
-  max-width: 1120px;
-  padding: clamp(48px, 9vh, 96px) 0;
-  place-items: center;
-  width: 100%;
+  flex-direction: column;
+  gap: clamp(18px, 2.6vh, 26px);
+  justify-content: safe center;
+  padding-block: clamp(20px, 3.6vh, 44px);
+  text-align: center;
 }
 
-.hero {
-  max-width: 780px;
-  width: 100%;
+.fw-card {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 138px;
+  justify-content: center;
+  width: 138px;
 }
 
-.eyebrow {
+.fw-card img {
+  display: block;
+  height: 52px;
+  width: 52px;
+}
+
+.fw-card h1 {
   color: var(--muted);
-  font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.13em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
   margin: 0;
   text-transform: uppercase;
 }
 
-h1 {
-  font-size: clamp(46px, 8vw, 92px);
-  font-weight: 760;
-  letter-spacing: -0.062em;
-  line-height: 0.96;
-  margin: 18px 0 24px;
-}
-
-h1 em {
-  color: var(--accent);
-  font-style: normal;
-  transition: color 180ms ease;
-}
-
-.lede {
-  color: var(--muted);
-  font-size: clamp(16px, 2vw, 19px);
-  line-height: 1.6;
-  margin: 0;
-  max-width: 58ch;
-}
-
-.actions {
-  align-items: center;
+.switcher {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 34px;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
 }
 
-.button {
+.switch {
   align-items: center;
-  background: var(--ink);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: #08080d;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--body);
   display: inline-flex;
-  font-size: 14px;
-  font-weight: 700;
-  gap: 10px;
-  padding: 13px 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  justify-content: center;
+  min-width: 132px;
+  padding: 11px 18px;
   text-decoration: none;
   transition:
-    background 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    background-color 150ms var(--ease),
+    border-color 150ms var(--ease),
+    color 150ms var(--ease);
 }
 
-.button:hover {
-  transform: translateY(-1px);
+a.switch:hover {
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
-.button.secondary {
+.switch[aria-current="page"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #08080d;
+}
+
+.line {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 42ch;
+}
+
+/* ---------- code ---------- */
+
+.code {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin: 0;
+  overflow: hidden;
+  text-align: left;
+  width: min(100%, 620px);
+}
+
+.code-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--faint);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 9px 10px 9px 16px;
+}
+
+.copy {
+  align-items: center;
   background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--faint);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background-color 140ms var(--ease),
+    border-color 140ms var(--ease),
+    color 140ms var(--ease);
+  width: 28px;
+}
+
+.copy:hover {
+  background: rgba(255, 255, 255, 0.04);
   border-color: var(--line);
   color: var(--ink);
 }
 
-.button.secondary:hover {
-  border-color: rgba(255, 255, 255, 0.28);
+.copy__check,
+.copy[data-copied] .copy__copy {
+  display: none;
 }
 
-.card {
-  align-items: end;
-  backdrop-filter: blur(16px);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: 1fr auto;
-  margin-top: 46px;
-  padding: 22px 24px;
+.copy[data-copied] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
 }
 
-.card-title {
-  font-size: 18px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  margin: 10px 0 4px;
+.copy[data-copied] .copy__check {
+  display: block;
 }
 
-.card-note {
-  color: var(--muted);
-  font-size: 13px;
+pre {
   margin: 0;
+  overflow-x: auto;
+  padding: 16px 18px 18px;
 }
 
-.big {
-  color: var(--accent);
-  font-size: clamp(56px, 9vw, 82px);
-  font-weight: 800;
-  letter-spacing: -0.08em;
-  line-height: 0.8;
-  transition: color 180ms ease;
+code {
+  color: var(--body);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre;
 }
 
-.footer {
-  border-top: 1px solid var(--line);
-  color: var(--muted);
+/* The agent prompt is prose, not code. Wrap it like a paragraph. */
+.code--prose code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* ---------- footer ---------- */
+
+.foot {
+  align-items: center;
+  border-top: 1px solid var(--line-soft);
   display: flex;
-  font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
-  font-size: 11px;
-  gap: 16px;
-  justify-content: space-between;
-  letter-spacing: 0.02em;
-  margin: 0 auto;
-  max-width: 1120px;
+  justify-content: center;
   padding-top: 18px;
-  width: 100%;
 }
 
-.chip {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
-  border-radius: 999px;
-  color: var(--accent);
-  display: inline-flex;
-  font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 5px 9px;
+.duration {
+  align-items: center;
+  color: var(--faint);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  gap: 10px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-@media (max-width: 640px) {
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+.duration input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 18px;
+  width: clamp(130px, 30vw, 210px);
+}
+
+.duration output {
+  color: var(--muted);
+  min-width: 56px;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding-top: 18px;
   }
 
-  nav {
-    justify-content: center;
-    width: 100%;
+  .wordmark {
+    font-size: 23px;
   }
 
-  .card {
-    grid-template-columns: 1fr;
+  .stage {
+    gap: 20px;
+    padding-block: 34px;
   }
 
-  .footer {
-    flex-direction: column;
-    gap: 6px;
+  .fw-card {
+    border-radius: 16px;
+    height: 120px;
+    width: 120px;
+  }
+
+  .fw-card img {
+    height: 44px;
+    width: 44px;
+  }
+
+  .switch {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 12px;
+  }
+
+  pre {
+    padding: 14px;
+  }
+
+  /* The snippets are wider than a phone. Wrap them rather than clipping the
+     first line mid-word with no hint that the block scrolls. */
+  code {
+    font-size: 11px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  .switch,
+  .picker select,
+  .copy,
+  .skip {
+    transition: none;
   }
 }

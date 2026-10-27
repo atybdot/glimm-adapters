@@ -1,24 +1,51 @@
 <script lang="ts">
-  import { appHref } from "../router";
+  import { demos } from "@glimm-examples/shared/demo-data";
+  import { flashCopy } from "@glimm-examples/shared/copy";
+
+  const demo = demos.svelte;
+  let button: HTMLButtonElement;
 </script>
 
-<p class="eyebrow">Second page · Svelte</p>
-<h1>
-  New page.<br />
-  <em>Same canvas.</em>
-</h1>
-<p class="lede">
-  This is page B. The sweep committed the route at its midpoint. The canvas survived the swap, so
-  a second navigation starts from a clean state.
-</p>
-<div class="actions">
-  <a class="button" href={appHref("/")}>Back to the Home page <span aria-hidden="true">→</span></a>
-</div>
-<div class="card">
-  <div>
-    <p class="eyebrow">Current page</p>
-    <p class="card-title">Page B · About</p>
-    <p class="card-note">Navigate back and forth; the transition should feel identical.</p>
-  </div>
-  <div class="big">B</div>
-</div>
+<figure class="code">
+  <figcaption class="code-head">
+    <span>{demo.file}</span>
+    <button
+      bind:this={button}
+      type="button"
+      class="copy"
+      aria-label="Copy the snippet"
+      onclick={() => void flashCopy(button, demo.code)}
+    >
+      <svg
+        class="copy__copy"
+        viewBox="0 0 16 16"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="6" y="6" width="8" height="8" rx="1.5" />
+        <path d="M10 6V3.5A1.5 1.5 0 0 0 8.5 2h-5A1.5 1.5 0 0 0 2 3.5v5A1.5 1.5 0 0 0 3.5 10H6" />
+      </svg>
+      <svg
+        class="copy__check"
+        viewBox="0 0 16 16"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m3 8.5 3.2 3L13 4.5" />
+      </svg>
+    </button>
+  </figcaption>
+  <pre><code>{demo.code}</code></pre>
+</figure>

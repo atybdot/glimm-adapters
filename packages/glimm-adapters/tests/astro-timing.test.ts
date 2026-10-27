@@ -55,10 +55,18 @@ describe("setupGlimmAstro navigation timing", () => {
   it("runs one plain sweep by default and commits at its midpoint", async () => {
     const { canvas } = mountPages();
     let curtainAtCommit = "";
-    let sweepsAtCommit = 0;
+    let progressAtCommit = 0;
+    const progressValues: number[] = [];
+    const setProgress = fakeGlimm.controller.setProgress;
+    vi.spyOn(fakeGlimm.controller, "setProgress").mockImplementation((value: number) => {
+      progressValues.push(value);
+      setProgress(value);
+    });
+    let framesAtCommit = 0;
     const navigate = vi.fn<() => Promise<void>>(async () => {
       curtainAtCommit = curtainState();
-      sweepsAtCommit = fakeGlimm.playSweep.mock.calls.length;
+      framesAtCommit = progressValues.length;
+      progressAtCommit = fakeGlimm.controller.getProgress();
       expect(pageMounted("b")).toBe(false);
       renderPage("b");
       document.dispatchEvent(new Event("astro:after-swap"));
@@ -71,9 +79,13 @@ describe("setupGlimmAstro navigation timing", () => {
     await handle!.done;
 
     expect(navigate).toHaveBeenCalledWith("/b");
+    expect(progressAtCommit).toBeCloseTo(0.56, 5);
     // The commit happens inside the same single sweep, not between two.
-    expect(sweepsAtCommit).toBe(1);
-    expect(fakeGlimm.playSweep).toHaveBeenCalledTimes(1);
+    const afterCommit = progressValues
+      .slice(framesAtCommit)
+      .filter((value) => value > 0.56 && value < 1);
+    expect(afterCommit.length).toBeGreaterThan(0);
+    expect(fakeGlimm.playSweep).not.toHaveBeenCalled();
     // Reveal mode never paints the curtain, so there is no blank hold.
     expect(curtainAtCommit).toBe("idle");
     expect(pageMounted("b")).toBe(true);
@@ -109,9 +121,9 @@ describe("setupGlimmAstro navigation timing", () => {
       done = true;
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    // The band has to reach the midpoint before the commit runs.
+    await vi.waitFor(() => expect(pageMounted("b")).toBe(true));
     expect(done).toBe(false);
-    expect(pageMounted("b")).toBe(true);
 
     finishTransition();
     await handle.done;

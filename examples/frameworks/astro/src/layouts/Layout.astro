@@ -6,7 +6,7 @@ interface Props {
   title?: string;
 }
 
-const { title = "glimm / Astro" } = Astro.props;
+const { title = "glimm-adapters × Astro" } = Astro.props;
 ---
 
 <html lang="en" transition:animate="none">
@@ -18,8 +18,6 @@ const { title = "glimm / Astro" } = Astro.props;
     <ClientRouter fallback="swap" />
   </head>
   <body>
-    <div class="backdrop" aria-hidden="true"></div>
-
     <!-- transition:persist keeps this node across Astro's swaps. The adapter
          re-hosts it and owns the sweep. -->
     <canvas id="glimm" transition:persist="glimm-canvas" aria-hidden="true"></canvas>
@@ -29,11 +27,66 @@ const { title = "glimm / Astro" } = Astro.props;
     <script>
       import { navigate } from "astro:transitions/client";
       import { setupGlimmAstro } from "glimm-adapters/astro";
+      import { SWEEP_MS } from "@glimm-examples/shared/demo-data";
+      import { flashCopy } from "@glimm-examples/shared/copy";
+
+      type DemoWindow = Window & {
+        __glimmDemo?: { defaults: { sweepMs: number }; wired: boolean };
+      };
+
+      // Keep one defaults object for the life of the tab. Astro re-runs this
+      // script after a swap; the same object keeps the setup key stable.
+      const view = window as DemoWindow;
+      const store = (view.__glimmDemo ??= {
+        defaults: { sweepMs: SWEEP_MS.initial },
+        wired: false,
+      });
 
       const canvas = document.querySelector("#glimm");
       if (canvas instanceof HTMLCanvasElement) {
-        setupGlimmAstro({ canvas, navigate, mode: "reveal" });
+        setupGlimmAstro({ canvas, navigate, mode: "reveal", defaults: store.defaults });
       }
+
+      const sync = () => {
+        const input = document.querySelector<HTMLInputElement>(".duration input");
+        const output = document.querySelector<HTMLOutputElement>(".duration output");
+        if (input) input.value = String(store.defaults.sweepMs);
+        if (output) output.textContent = `${store.defaults.sweepMs} ms`;
+      };
+
+      if (!store.wired) {
+        store.wired = true;
+
+        document.addEventListener("input", (event) => {
+          const input = event.target;
+          if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
+
+          store.defaults.sweepMs = Number(input.value);
+          const output = input.closest(".duration")?.querySelector("output");
+          if (output) output.textContent = `${store.defaults.sweepMs} ms`;
+        });
+
+        // The framework picker carries one absolute href per option, so the
+        // swap between the six separate builds is a plain document load.
+        document.addEventListener("change", (event) => {
+          const select = event.target;
+          if (select instanceof HTMLSelectElement && select.matches("[data-framework]")) {
+            window.location.assign(select.value);
+          }
+        });
+
+        document.addEventListener("click", (event) => {
+          const target = event.target;
+          const button = target instanceof Element ? target.closest("[data-copy]") : null;
+          if (!(button instanceof HTMLButtonElement)) return;
+          const text = button.closest(".code")?.querySelector("code")?.textContent;
+          if (text) void flashCopy(button, text);
+        });
+
+        document.addEventListener("astro:page-load", sync);
+      }
+
+      sync();
     </script>
   </body>
 </html>

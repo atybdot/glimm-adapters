@@ -29,10 +29,18 @@ describe("setupGlimmVue navigation timing", () => {
   it("runs one plain sweep and calls router.push at its midpoint", async () => {
     const { canvas } = mountPages();
     let curtainAtCommit = "";
-    let sweepsAtCommit = 0;
+    let progressAtCommit = 0;
+    const progressValues: number[] = [];
+    const setProgress = fakeGlimm.controller.setProgress;
+    vi.spyOn(fakeGlimm.controller, "setProgress").mockImplementation((value: number) => {
+      progressValues.push(value);
+      setProgress(value);
+    });
+    let framesAtCommit = 0;
     const push = vi.fn<() => Promise<void>>(async () => {
       curtainAtCommit = curtainState();
-      sweepsAtCommit = fakeGlimm.playSweep.mock.calls.length;
+      framesAtCommit = progressValues.length;
+      progressAtCommit = fakeGlimm.controller.getProgress();
       expect(pageMounted("b")).toBe(false);
       renderPage("b");
     });
@@ -44,8 +52,13 @@ describe("setupGlimmVue navigation timing", () => {
     await handle!.done;
 
     expect(push).toHaveBeenCalledWith("/b");
-    expect(sweepsAtCommit).toBe(1);
-    expect(fakeGlimm.playSweep).toHaveBeenCalledTimes(1);
+    expect(progressAtCommit).toBeCloseTo(0.56, 5);
+    // The band keeps moving after the commit, so it finishes over page B.
+    const afterCommit = progressValues
+      .slice(framesAtCommit)
+      .filter((value) => value > 0.56 && value < 1);
+    expect(afterCommit.length).toBeGreaterThan(0);
+    expect(fakeGlimm.playSweep).not.toHaveBeenCalled();
     expect(curtainAtCommit).toBe("idle");
     expect(pageMounted("b")).toBe(true);
     expect(curtainState()).toBe("idle");

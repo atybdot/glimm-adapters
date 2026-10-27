@@ -27,10 +27,26 @@ export function createMockController(): ShaderController {
 }
 
 /** jsdom has no visual frames, so tick them through the timer queue. */
-export function stubFrames() {
-  return vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-    return window.setTimeout(() => callback(performance.now()), 0) as unknown as number;
+export function stubFrames(stepMs = 16) {
+  let now = performance.now();
+  const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
+  const frameSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    return window.setTimeout(() => {
+      now += stepMs;
+      callback(now);
+    }, 0) as unknown as number;
   });
+  return {
+    /** Move the virtual clock without waiting for a frame. */
+    advance(ms = stepMs) {
+      now += ms;
+    },
+    now: () => now,
+    mockRestore() {
+      frameSpy.mockRestore();
+      nowSpy.mockRestore();
+    },
+  };
 }
 
 /** The curtain phase currently painted over the page. */

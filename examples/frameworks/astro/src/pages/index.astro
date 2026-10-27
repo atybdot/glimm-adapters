@@ -1,31 +1,11 @@
 ---
+import { demos } from "@glimm-examples/shared/demo-data";
 import DemoPage from "../components/DemoPage.astro";
 import Layout from "../layouts/Layout.astro";
+
+const demo = demos.astro;
 ---
 
-<Layout title="glimm / Astro · Home">
-  <DemoPage page="home">
-    <p class="eyebrow">Framework demo · Astro</p>
-    <h1>
-      Sweep in.<br />
-      <em>Land on the next view.</em>
-    </h1>
-    <p class="lede">
-      This is page A. Click the link and watch the band cross while the router swaps the view. The
-      canvas stays put; only the page changes.
-    </p>
-    <div class="actions">
-      <a class="button" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/about`}
-        >Open the About page <span aria-hidden="true">→</span></a
-      >
-    </div>
-    <div class="card">
-      <div>
-        <p class="eyebrow">Current page</p>
-        <p class="card-title">Page A · Home</p>
-        <p class="card-note">Astro's ClientRouter swaps the page; the adapter commits at midpoint.</p>
-      </div>
-      <div class="big">A</div>
-    </div>
-  </DemoPage>
+<Layout title={`glimm-adapters × ${demo.name}`}>
+  <DemoPage page="home" />
 </Layout>

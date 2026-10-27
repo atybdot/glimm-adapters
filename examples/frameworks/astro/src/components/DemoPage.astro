@@ -1,32 +1,95 @@
 ---
+import {
+  demos,
+  frameworks,
+  frameworkHref,
+  SWEEP_MS,
+} from "@glimm-examples/shared/demo-data";
+
 interface Props {
-  page: "home" | "about";
+  page: "home" | "about" | "prompt";
 }
 
 const { page } = Astro.props;
+const demo = demos.astro;
 // Astro trims the trailing slash from `base`, so add it back for the links.
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+const logo = `${base}${demo.logo}`;
+const wiring = page === "about";
+const tabs = [
+  { id: "home", label: "Sweep", href: base },
+  { id: "about", label: "Wiring", href: `${base}about/` },
+  { id: "prompt", label: "Prompt", href: `${base}prompt/` },
+] as const;
 ---
 
-<div class="page" data-page={page}>
-  <header class="topbar">
-    <a class="brand" href={base}>
-      <span class="mark"></span> glimm <span>/ Astro</span>
-    </a>
-    <nav>
-      <a href={base} aria-current={page === "home" ? "page" : undefined}>Home</a>
-      <a href={`${base}about`} aria-current={page === "about" ? "page" : undefined}>About</a>
-    </nav>
+<div class="page" style={`--accent: ${demo.accent}`}>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="bar">
+    <a class="wordmark" href={base} aria-label="glimm-adapters home">glimm-adapters</a>
+    <span class="slash" aria-hidden="true">/</span>
+    <label class="picker">
+      <span class="sr-only">Framework</span>
+      <select name="framework" data-framework>
+        {
+          frameworks.map((framework) => (
+            <option value={frameworkHref(base, framework.id)} selected={framework.id === demo.id}>
+              {framework.name}
+            </option>
+          ))
+        }
+      </select>
+      <svg
+        viewBox="0 0 12 12"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m3 4.5 3 3 3-3"></path>
+      </svg>
+    </label>
   </header>
 
-  <main>
-    <section class="hero">
-      <slot />
-    </section>
+  <main class="stage" id="main">
+    <div class="fw-card">
+      <img src={logo} alt="" width="52" height="52" />
+      <h1>{demo.name}</h1>
+    </div>
+
+    <nav class="switcher" aria-label="Demo pages">
+      {
+        tabs.map((tab) =>
+          tab.id === page ? (
+            <span class="switch" aria-current="page">
+              {tab.label}
+            </span>
+          ) : (
+            <a class="switch" href={tab.href}>
+              {tab.label}
+            </a>
+          ),
+        )
+      }
+    </nav>
+
+    {page === "home" ? <p class="line">{demo.line}</p> : <slot />}
   </main>
 
-  <footer class="footer">
-    <span>glimm-adapters / astro</span>
-    <span>setupGlimmAstro · mode: reveal</span>
+  <footer class="foot" transition:persist="demo-foot">
+    <label class="duration">
+      <span>duration</span>
+      <input
+        type="range"
+        min={SWEEP_MS.min}
+        max={SWEEP_MS.max}
+        step={SWEEP_MS.step}
+        value={SWEEP_MS.initial}
+      />
+      <output>{SWEEP_MS.initial} ms</output>
+    </label>
   </footer>
 </div>

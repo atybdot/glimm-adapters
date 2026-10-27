@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import About from "./pages/About.vue";
 import Home from "./pages/Home.vue";
+import Prompt from "./pages/Prompt.vue";
 
 /**
  * The docs worker serves this app from /example/vue. Vite writes that path
@@ -23,6 +24,7 @@ export const router = createRouter({
   routes: [
     { path: "/", component: Home },
     { path: "/about", component: About },
+    { path: "/prompt", component: Prompt },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });
