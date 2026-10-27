@@ -23,19 +23,16 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 12.15.0
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "22"
-          check-latest: true
-          cache: "pnpm"
+          node-version: 26
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -58,20 +55,41 @@ jobs:
         working-directory: apps/web
         run: pnpm exec cf deploy --prebuilt
 
+      # Fork PRs get no secrets and a read-only token, so a preview cannot be
+      # deployed or commented on there. Skip instead of failing the run.
       - name: Deploy preview
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         id: preview
         working-directory: apps/web
         # cf previews deploy runs its own build with preview intent. A normal
         # build cannot be reused here because the CLI rejects non-preview output.
         run: |
-          set -o pipefail
+          set -euo pipefail
           pnpm exec cf previews deploy "pr-${{ github.event.pull_request.number }}" 2>&1 | tee preview.log
           # The CLI prints the stable preview URL and a per-deployment URL,
           # both inside quotes. Match the host only so the comment stays a
           # clickable link.
           url=$(grep -m1 -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' preview.log || true)
           echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # Preview URLs are public until Access is attached to the Worker's
+      # previews (see "Preview deployments" in README.md). Fail instead of
+      # shipping an open one.
+      - name: Require Access in front of the preview
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: |
+          set -euo pipefail
+          test -n "$PREVIEW_URL"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$PREVIEW_URL/")
+          case "$code" in
+            302 | 401 | 403) echo "preview asks for Access sign-in ($code)" ;;
+            *)
+              echo "::error::$PREVIEW_URL answered $code, so the preview is open to the public"
+              exit 1
+              ;;
+          esac
 
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request' && steps.preview.outputs.url != ''
