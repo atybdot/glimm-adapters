@@ -26,67 +26,60 @@ const { title = "glimm-adapters × Astro" } = Astro.props;
 
     <script>
       import { navigate } from "astro:transitions/client";
+      import { accentChain } from "glimm-adapters";
       import { setupGlimmAstro } from "glimm-adapters/astro";
-      import { SWEEP_MS } from "@glimm-examples/shared/demo-data";
+      import { demos, SWEEP_MS } from "@glimm-examples/shared/demo-data";
       import { flashCopy } from "@glimm-examples/shared/copy";
-
-      type DemoWindow = Window & {
-        __glimmDemo?: { defaults: { sweepMs: number }; wired: boolean };
-      };
-
-      // Keep one defaults object for the life of the tab. Astro re-runs this
-      // script after a swap; the same object keeps the setup key stable.
-      const view = window as DemoWindow;
-      const store = (view.__glimmDemo ??= {
-        defaults: { sweepMs: SWEEP_MS.initial },
-        wired: false,
-      });
+      import { initPicker } from "@glimm-examples/shared/picker";
 
       const canvas = document.querySelector("#glimm");
       if (canvas instanceof HTMLCanvasElement) {
-        setupGlimmAstro({ canvas, navigate, mode: "reveal", defaults: store.defaults });
+        setupGlimmAstro({
+          canvas,
+          navigate,
+          mode: "reveal",
+          defaults: {
+            sweepMs: SWEEP_MS,
+            palette: accentChain(demos.astro.palette),
+          },
+        });
       }
 
-      const sync = () => {
-        const input = document.querySelector<HTMLInputElement>(".duration input");
-        const output = document.querySelector<HTMLOutputElement>(".duration output");
-        if (input) input.value = String(store.defaults.sweepMs);
-        if (output) output.textContent = `${store.defaults.sweepMs} ms`;
-      };
-
-      if (!store.wired) {
-        store.wired = true;
-
-        document.addEventListener("input", (event) => {
-          const input = event.target;
-          if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
-
-          store.defaults.sweepMs = Number(input.value);
-          const output = input.closest(".duration")?.querySelector("output");
-          if (output) output.textContent = `${store.defaults.sweepMs} ms`;
-        });
-
-        // The framework picker carries one absolute href per option, so the
-        // swap between the six separate builds is a plain document load.
-        document.addEventListener("change", (event) => {
-          const select = event.target;
-          if (select instanceof HTMLSelectElement && select.matches("[data-framework]")) {
-            window.location.assign(select.value);
-          }
-        });
+      // Astro re-runs this script after a swap, but the document listeners must
+      // only be bound once.
+      const view = window as Window & { __glimmDemoWired?: boolean };
+      if (!view.__glimmDemoWired) {
+        view.__glimmDemoWired = true;
+        initPicker();
 
         document.addEventListener("click", (event) => {
           const target = event.target;
-          const button = target instanceof Element ? target.closest("[data-copy]") : null;
+          if (!(target instanceof Element)) return;
+
+          const tab = target.closest("[data-tab]");
+          if (tab instanceof HTMLButtonElement) {
+            const panel = tab.closest(".panel");
+            if (!panel) return;
+
+            const id = tab.dataset.tab;
+            for (const button of panel.querySelectorAll("[data-tab]")) {
+              button.setAttribute("aria-pressed", String(button === tab));
+            }
+            for (const sheet of panel.querySelectorAll("[data-panel]")) {
+              if (sheet instanceof HTMLElement) sheet.hidden = sheet.dataset.panel !== id;
+            }
+            return;
+          }
+
+          const button = target.closest("[data-copy]");
           if (!(button instanceof HTMLButtonElement)) return;
-          const text = button.closest(".code")?.querySelector("code")?.textContent;
+
+          const text = button
+            .closest(".panel")
+            ?.querySelector("[data-panel]:not([hidden]) code")?.textContent;
           if (text) void flashCopy(button, text);
         });
-
-        document.addEventListener("astro:page-load", sync);
       }
-
-      sync();
     </script>
   </body>
 </html>
