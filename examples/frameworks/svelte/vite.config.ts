@@ -5,6 +5,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 // so `pnpm dev:examples` opens on http://localhost:4604/.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/example/svelte/" : "/",
+  publicDir: "../shared/public",
   plugins: [svelte()],
   server: { port: 4604, strictPort: true },
   preview: { port: 4604, strictPort: true },
