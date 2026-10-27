@@ -4,12 +4,11 @@
 // midpoint. `mode: "covered"` keeps the older cover → hold → reveal path for
 // routes that may take longer than the band.
 
-import { createShader, playSweep, resolvePalette } from "glimm";
+import { createShader, resolvePalette } from "glimm";
 import type { ShaderController, SweepHandle, SweepOptions } from "glimm";
 import {
   COMMIT_TIMEOUT_MS,
   ensureCurtainHost,
-  nextPaint,
   playCoveredSweep,
   viewTransitionSettled,
   withTimeout,
@@ -17,6 +16,7 @@ import {
 import type { Curtain } from "./covered.js";
 import { interceptLinks } from "./intercept.js";
 import type { InterceptLinksOptions } from "./intercept.js";
+import { playRevealSweep } from "./reveal.js";
 import { createCanvasSlots, setupKey } from "./setup-key.js";
 
 export type ReducedMotionMode = "instant" | "sweep";
@@ -199,20 +199,18 @@ export function runVanillaSweep(args: RunSweepArgs): SweepHandle | null {
     // A previous plain sweep may have been cancelled mid-band. Start fresh.
     controller.setAlpha(0);
     controller.setProgress(0);
-    const handle = playSweep(controller, {
-      ...merged,
-      onMidpoint: async () => {
-        await merged.onMidpoint?.();
-        await withTimeout(
-          Promise.resolve().then(() => commit(new AbortController().signal)),
+    // Reveal mode owns the clock: the band freezes at the midpoint until the
+    // commit has painted, so the new page never appears after the sweep.
+    const handle = playRevealSweep(
+      controller,
+      (signal) =>
+        withTimeout(
+          Promise.resolve().then(() => commit(signal)),
           COMMIT_TIMEOUT_MS,
           "content commit",
-        );
-        // Let the new view paint before the outro starts. Without this the
-        // band leaves while the router is still swapping the old page out.
-        await nextPaint();
-      },
-    }) as ActiveHandle;
+        ),
+      merged,
+    ) as ActiveHandle;
     trackHandle(state, handle);
     return handle;
   }

@@ -38,7 +38,12 @@ Builds use `/example/<framework>/` as their base, matching the docs site. Previe
 
 ## What to check
 
-- Click **About** and then **Home**. The page should swap exactly once per click.
+- Click the **glimm-adapters** wordmark to leave the demo. A staged build goes to `/`; dev goes to
+  the docs site at <https://glimm-adapters.localhost>.
+
+- Open **Second page** and then **Back to the demo**. The page should swap exactly once per click.
+- Switch between the **Wiring** and **Agent prompt** tabs. Both copy from the one button, and the
+  layout should not jump.
 - Watch the canvas across the swap. Only the page should change; the canvas must survive.
 - Use the browser back/forward buttons. They should land on the right page without a stuck curtain.
 - Compare the adapter apps with React and TanStack. The DOM adapters commit at the sweep's midpoint
@@ -48,6 +53,9 @@ Builds use `/example/<framework>/` as their base, matching the docs site. Previe
   navigations.
 
 ## Notes
+
+- Framework marks live in `shared/public/logos`. Every app points `publicDir` at that folder, so the
+  repository keeps one source copy while each build still emits the marks under `<base>logos/`.
 
 - Apps import `glimm-adapters` from the workspace, which resolves to `packages/glimm-adapters/dist`.
   After editing the package source, rebuild it before reloading:

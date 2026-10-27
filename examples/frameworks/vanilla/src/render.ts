@@ -1,69 +1,135 @@
+import {
+  agentPrompt,
+  demos,
+  frameworks,
+  frameworkHref,
+  siteHref,
+} from "@glimm-examples/shared/demo-data";
+import { highlight } from "@glimm-examples/shared/highlight";
 import { appHref } from "./base";
 
-const shell = (page: "home" | "about", body: string) => {
-  const isAbout = page === "about";
-  return `
-    <div class="page" data-page="${page}">
-      <header class="topbar">
-        <a class="brand" href="${appHref("/")}"><span class="mark"></span> glimm <span>/ vanilla</span></a>
-        <nav>
-          <a href="${appHref("/")}" ${isAbout ? "" : 'aria-current="page"'}>Home</a>
-          <a href="${appHref("/about")}" ${isAbout ? 'aria-current="page"' : ""}>About</a>
-        </nav>
-      </header>
-      <main>
-        <section class="hero">
-          ${body}
-        </section>
-      </main>
-      <footer class="footer">
-        <span>glimm-adapters / vanilla</span>
-        <span>Reveal sweep · one pass</span>
-      </footer>
+const demo = demos.vanilla;
+const logo = appHref(`/${demo.logo}`);
+const base = import.meta.env.BASE_URL;
+
+/** The snippet is injected as HTML, so escape it before it reaches the page. */
+const escape = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const copyIcon = `
+  <svg class="copy__copy" viewBox="0 0 16 16" width="15" height="15" fill="none"
+    stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="6" y="6" width="8" height="8" rx="1.5" />
+    <path d="M10 6V3.5A1.5 1.5 0 0 0 8.5 2h-5A1.5 1.5 0 0 0 2 3.5v5A1.5 1.5 0 0 0 3.5 10H6" />
+  </svg>
+  <svg class="copy__check" viewBox="0 0 16 16" width="15" height="15" fill="none"
+    stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m3 8.5 3.2 3L13 4.5" />
+  </svg>
+`;
+
+const chevron = `
+  <svg class="picker-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m3 4.5 3 3 3-3" />
+  </svg>
+`;
+
+const arrowLeft = `
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M9 1.5 3.5 6 9 10.5" />
+  </svg>
+`;
+
+const arrowRight = `
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m6 1.5 4.5 4.5L6 10.5M1.5 6h9" />
+  </svg>
+`;
+
+const options = frameworks
+  .map(
+    (framework) => `
+      <a class="picker-item" href="${frameworkHref(base, framework.id)}" data-glimm-skip${
+        framework.id === demo.id ? ' aria-current="page"' : ""
+      }>
+        <img src="${appHref(`/${framework.logo}`)}" alt="" width="17" height="17" />
+        ${framework.name}
+      </a>`,
+  )
+  .join("");
+
+const bar = `
+  <header class="bar">
+    <a class="wordmark" href="${siteHref(base)}" data-glimm-skip>glimm-adapters</a>
+    <details class="picker" data-picker>
+      <summary>
+        <img class="picker-mark" src="${logo}" alt="" width="17" height="17" />
+        <span>${demo.name}</span>
+        ${chevron}
+      </summary>
+      <div class="picker-menu">${options}</div>
+    </details>
+  </header>
+`;
+
+const sheet = (id: "wiring" | "prompt", file: string, html: string, hidden: boolean) => `
+  <div class="sheet${id === "prompt" ? " sheet--prose" : ""}" data-panel="${id}" ${hidden ? "hidden" : ""}>
+    <p class="sheet-file">${file}</p>
+    <pre><code>${html}</code></pre>
+  </div>
+`;
+
+const panel = `
+  <section class="panel" aria-label="Setup">
+    <div class="panel-head">
+      <div class="tabs" role="group" aria-label="Setup">
+        <button class="tab" type="button" aria-pressed="true" data-tab="wiring">Wiring</button>
+        <button class="tab" type="button" aria-pressed="false" data-tab="prompt">Agent prompt</button>
+      </div>
+      <button type="button" class="copy" data-copy aria-label="Copy">
+        ${copyIcon}
+      </button>
     </div>
-  `;
-};
+    ${sheet("wiring", demo.file, highlight(demo.code, demo.lang), false)}
+    ${sheet("prompt", "agent prompt", escape(agentPrompt(demo)), true)}
+  </section>
+`;
 
 const home = `
-  <p class="eyebrow">Framework demo · Vanilla JS</p>
-  <h1>Sweep in.<br /><em>Land on the next view.</em></h1>
-  <p class="lede">
-    This is page A. Click the link and watch the band cross while the router
-    swaps the view. The canvas stays put; only the page changes.
-  </p>
-  <div class="actions">
-    <a class="button" href="${appHref("/about")}">Open the About page <span aria-hidden="true">→</span></a>
-  </div>
-  <div class="card">
-    <div>
-      <p class="eyebrow">Current page</p>
-      <p class="card-title">Page A · Home</p>
-      <p class="card-note">The plain router is 30 lines. No framework, no magic.</p>
-    </div>
-    <div class="big">A</div>
+  <div class="home">
+    <section class="intro">
+      <img class="mark" src="${logo}" alt="" width="38" height="38" />
+      <h1>${demo.name}</h1>
+      <p class="line">${demo.line}</p>
+      <a class="next" href="${appHref("/about")}">
+        <span>Second page</span>${arrowRight}
+      </a>
+    </section>
+    ${panel}
   </div>
 `;
 
 const about = `
-  <p class="eyebrow">Second page · Vanilla JS</p>
-  <h1>New page.<br /><em>Same canvas.</em></h1>
-  <p class="lede">
-    This is page B. The sweep committed the route at its midpoint. The canvas
-    survived the swap, so a second navigation starts from a clean state.
-  </p>
-  <div class="actions">
-    <a class="button" href="${appHref("/")}">Back to the Home page <span aria-hidden="true">→</span></a>
-  </div>
-  <div class="card">
-    <div>
-      <p class="eyebrow">Current page</p>
-      <p class="card-title">Page B · About</p>
-      <p class="card-note">Navigate back and forth; the transition should feel identical.</p>
-    </div>
-    <div class="big">B</div>
-  </div>
+  <section class="second">
+    <h1>Second page.</h1>
+    <p>Same canvas, same listener. The band covered once and left.</p>
+    <a class="next" href="${appHref("/")}">${arrowLeft}<span>Back to the demo</span></a>
+  </section>
 `;
 
-export function renderPage(pathname: string): string {
-  return pathname === "/about" ? shell("about", about) : shell("home", home);
+export function renderPage(path: string): string {
+  const isAbout = path === "/about";
+
+  return `
+    <div class="page" style="--accent: ${demo.accent}">
+      <a class="skip" href="#main">Skip to content</a>
+      ${bar}
+      <main class="main" id="main">
+        ${isAbout ? about : home}
+      </main>
+    </div>
+  `;
 }

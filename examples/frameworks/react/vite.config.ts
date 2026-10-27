@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 // so `pnpm dev:examples` opens on http://localhost:4602/.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/example/react/" : "/",
+  publicDir: "../shared/public",
   plugins: [react()],
   server: { port: 4602, strictPort: true },
   preview: { port: 4602, strictPort: true },

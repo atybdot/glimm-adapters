@@ -77,20 +77,51 @@ const tag = (cls: string, text: string): string => `<span class="${cls}">${esc(t
 const raw = (cls: string, text: string): string => `<span class="${cls}">${text}</span>`;
 
 const JS_TOKEN =
-  /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`)|\b(\d[\d_]*(?:\.\d+)?)\b|\b([A-Za-z_$][\w$]*)\b|([{}()[\];,.:=<>+\-*/%!?&|~^]+)/g;
+  /(?<comment>\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(?<str>'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`)|(?<jsx>(?<![\w$])<\/?[A-Z][\w.]*(?:\s+[A-Za-z_:][\w:.-]*(?:=(?:"[^"]*"|'[^']*'|\{[^}]*\}))?)*\s*\/?>)|(?<num>\b\d[\d_]*(?:\.\d+)?\b)|(?<ident>\b[A-Za-z_$][\w$]*\b)|(?<pun>[{}()[\];,.:=<>+\-*/%!?&|~^]+)/g;
+
+const JSX_ATTR = /([A-Za-z_:][\w:.-]*)(=)("[^"]*"|'[^']*'|\{[^}]*\})?/g;
+
+function highlightJsxAttrs(src: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of src.matchAll(JSX_ATTR)) {
+    const index = m.index ?? 0;
+    out += esc(src.slice(last, index));
+    out += raw("t-attr", esc(m[1] ?? ""));
+    if (m[2]) out += raw("t-pun", esc(m[2]));
+    if (m[3]) out += raw("t-str", esc(m[3]));
+    last = index + m[0].length;
+  }
+  return out + esc(src.slice(last));
+}
+
+/** One JSX tag: punctuation, a tag name, then attributes. */
+function highlightJsxTag(src: string): string {
+  const m = /^(<\/?)([A-Z][\w.]*)([\s\S]*?)(\/?>)$/.exec(src);
+  if (!m) return esc(src);
+  return (
+    raw("t-pun", esc(m[1] ?? "")) +
+    raw("t-tag", esc(m[2] ?? "")) +
+    highlightJsxAttrs(m[3] ?? "") +
+    raw("t-pun", esc(m[4] ?? ""))
+  );
+}
 
 function highlightJs(src: string): string {
   let out = "";
   let last = 0;
   let m: RegExpExecArray | null;
+  JS_TOKEN.lastIndex = 0;
   while ((m = JS_TOKEN.exec(src))) {
     out += esc(src.slice(last, m.index));
     const token = m[0];
+    const groups = m.groups ?? {};
     const after = src.slice(m.index + token.length);
-    if (m[1]) out += tag("t-com", token);
-    else if (m[2]) out += tag("t-str", token);
-    else if (m[3]) out += tag("t-num", token);
-    else if (m[4]) {
+    if (groups.comment) out += tag("t-com", token);
+    else if (groups.str) out += tag("t-str", token);
+    else if (groups.jsx) out += highlightJsxTag(token);
+    else if (groups.num) out += tag("t-num", token);
+    else if (groups.ident) {
       if (KEYWORDS.has(token)) out += tag("t-kw", token);
       else if (TYPES.has(token)) out += tag("t-typ", token);
       else if (/^\s*[(<]/.test(after)) out += tag("t-fn", token);

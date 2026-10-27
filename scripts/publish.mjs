@@ -182,9 +182,17 @@ const lastTag = capture(
   { allowFail: true },
 );
 const range = lastTag ? `${lastTag}..HEAD` : "HEAD";
-const log = capture("git", ["log", range, "--no-merges", "--pretty=format:%s"], {
-  allowFail: true,
-});
+const log = capture(
+  "git",
+  ["log", range, "--no-merges", "--pretty=format:%s", "--", relative(root, pkgDir)],
+  { allowFail: true },
+)
+  .split("\n")
+  .map((line) => line.trim())
+  // Release commits only bump the version and rewrite this file. They are not
+  // changes to the package.
+  .filter((line) => line && !line.startsWith("chore(release)"))
+  .join("\n");
 const date = new Date().toISOString().slice(0, 10);
 
 const GROUP_ORDER = ["Added", "Improved", "Fixed", "Performance", "Changed", "Internal"];
@@ -210,14 +218,15 @@ function capitalize(text) {
 /**
  * Commit subjects are untrusted input. Escape HTML and inline Markdown so a
  * subject like `<img src=x>` or `[text](url)` cannot inject markup into the
- * changelog or the GitHub release body.
+ * changelog or the GitHub release body. Parentheses stay readable: escape the
+ * brackets, which is what makes a link, not the URL in them.
  */
 function escapeMarkdown(text) {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/([\\`*_[\]()~|])/g, "\\$1");
+    .replace(/([\\`*_[\]~|])/g, "\\$1");
 }
 
 /** `feat(web): add a thing` -> { group: "Added", text: "Add a thing" }. */

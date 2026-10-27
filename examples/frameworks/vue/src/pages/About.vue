@@ -1,24 +1,20 @@
 <template>
-  <p class="eyebrow">Second page · Vue Router</p>
-  <h1>
-    New page.<br />
-    <em>Same canvas.</em>
-  </h1>
-  <p class="lede">
-    This is page B. The sweep committed the route at its midpoint. The canvas survived the swap, so
-    a second navigation starts from a clean state.
-  </p>
-  <div class="actions">
-    <RouterLink class="button" to="/">
-      Back to the Home page <span aria-hidden="true">→</span>
+  <section class="second">
+    <h1>Second page.</h1>
+    <p>Same canvas, same listener. The band covered once and left.</p>
+    <RouterLink class="next" to="/">
+      <svg
+        viewBox="0 0 12 12"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M9 1.5 3.5 6 9 10.5" />
+      </svg>
+      <span>Back to the demo</span>
     </RouterLink>
-  </div>
-  <div class="card">
-    <div>
-      <p class="eyebrow">Current page</p>
-      <p class="card-title">Page B · About</p>
-      <p class="card-note">Navigate back and forth; the transition should feel identical.</p>
-    </div>
-    <div class="big">B</div>
-  </div>
+  </section>
 </template>

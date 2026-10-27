@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { setupGlimmVue, type VueSweepApi } from "glimm-adapters/vue";
+import { demos, frameworks, frameworkHref, siteHref } from "@glimm-examples/shared/demo-data";
+import { initPicker } from "@glimm-examples/shared/picker";
+import { defaults } from "./glimm";
 import { stripBase } from "./router";
 
+const demo = demos.vue;
+const base = import.meta.env.BASE_URL;
+
 const canvas = ref<HTMLCanvasElement | null>(null);
-const route = useRoute();
 const router = useRouter();
-const page = computed(() => (route.path === "/about" ? "about" : "home"));
 
 // vue-router resolves once the route is confirmed, which can be a tick before
 // Vue has patched the DOM. The adapter waits for the next paint after this
@@ -26,40 +30,64 @@ const sweepRouter = {
 };
 
 let glimm: VueSweepApi | null = null;
+let stopPicker: (() => void) | null = null;
 
 onMounted(() => {
+  stopPicker = initPicker();
   if (canvas.value) {
-    glimm = setupGlimmVue({ canvas: canvas.value, router: sweepRouter, mode: "reveal" });
+    glimm = setupGlimmVue({ canvas: canvas.value, router: sweepRouter, mode: "reveal", defaults });
   }
 });
 
-onUnmounted(() => glimm?.destroy());
+onUnmounted(() => {
+  glimm?.destroy();
+  stopPicker?.();
+});
 </script>
 
 <template>
-  <div class="backdrop" aria-hidden="true"></div>
   <canvas ref="canvas" id="glimm" aria-hidden="true"></canvas>
 
-  <div class="page" :data-page="page">
-    <header class="topbar">
-      <RouterLink class="brand" to="/"> <span class="mark" /> glimm <span>/ Vue</span> </RouterLink>
-      <nav>
-        <RouterLink to="/" :aria-current="page === 'home' ? 'page' : undefined">Home</RouterLink>
-        <RouterLink to="/about" :aria-current="page === 'about' ? 'page' : undefined">
-          About
-        </RouterLink>
-      </nav>
+  <div class="page" :style="{ '--accent': demo.accent }">
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="bar">
+      <a class="wordmark" :href="siteHref(base)" data-glimm-skip>glimm-adapters</a>
+      <details class="picker" data-picker>
+        <summary>
+          <img class="picker-mark" :src="`${base}${demo.logo}`" alt="" width="17" height="17" />
+          <span>{{ demo.name }}</span>
+          <svg
+            class="picker-chevron"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m3 4.5 3 3 3-3" />
+          </svg>
+        </summary>
+        <div class="picker-menu">
+          <a
+            v-for="framework in frameworks"
+            :key="framework.id"
+            class="picker-item"
+            :href="frameworkHref(base, framework.id)"
+            data-glimm-skip
+            :aria-current="framework.id === demo.id ? 'page' : undefined"
+          >
+            <img :src="`${base}${framework.logo}`" alt="" width="17" height="17" />
+            {{ framework.name }}
+          </a>
+        </div>
+      </details>
     </header>
 
-    <main>
-      <section class="hero">
-        <RouterView />
-      </section>
+    <main class="main" id="main">
+      <RouterView />
     </main>
-
-    <footer class="footer">
-      <span>glimm-adapters / vue</span>
-      <span>setupGlimmVue · reveal sweep</span>
-    </footer>
   </div>
 </template>

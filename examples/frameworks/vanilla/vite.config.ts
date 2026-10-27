@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 // so `pnpm dev:examples` opens on http://localhost:4601/.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/example/vanilla/" : "/",
+  publicDir: "../shared/public",
   server: { port: 4601, strictPort: true },
   preview: { port: 4601, strictPort: true },
 }));

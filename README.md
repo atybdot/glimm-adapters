@@ -287,6 +287,30 @@ pnpm deploy:web:full  # same, then deploy
 ```
 
 CI (`.github/workflows/deploy-web.yml`) runs the same pipeline on push to `main` (production deploy) and on pull requests (a preview worker via `cf previews deploy`). It needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
+
+### Preview deployments
+
+Pull request previews are private. A Worker-level Access application with a `preview_worker` destination covers every preview URL of `glimm-adapters` and leaves the production `workers.dev` hostname public, so an anonymous request to `https://pr-<number>-glimm-adapters.atybdot.workers.dev` gets a login redirect instead of the site. The workflow fails a preview that answers anything other than that redirect.
+
+This is account setup, not repo setup. To recreate it, take the Worker id from `cf workers scripts search --name glimm-adapters` and create the application:
+
+```bash
+cf zero-trust access applications create --body '{
+  "type": "self_hosted",
+  "name": "glimm-adapters previews",
+  "destinations": [{ "type": "preview_worker", "worker_id": "<worker id>" }],
+  "policies": [
+    {
+      "decision": "allow",
+      "name": "Owner",
+      "include": [{ "email": { "email": "<your email>" } }]
+    }
+  ]
+}'
+```
+
+GitHub does not run `pull_request` workflows while a pull request has merge conflicts. A conflicted PR therefore gets `ci` from the branch push and no preview until the branch is merged up to date.
+
 The build renders the two share cards with Takumi and writes them to `public/og.png` and `public/og-changelog.png`. They are static files, so requests never render anything. To refresh them without a full build:
 
 ```bash

@@ -29,11 +29,17 @@ describe("setupGlimmVanilla navigation timing", () => {
   it("runs one plain sweep and commits page B at its midpoint", async () => {
     const { canvas } = mountPages();
     let curtainAtCommit = "";
-    let sweepsAtCommit = 0;
     let progressAtCommit = 0;
+    const progressValues: number[] = [];
+    const setProgress = fakeGlimm.controller.setProgress;
+    vi.spyOn(fakeGlimm.controller, "setProgress").mockImplementation((value: number) => {
+      progressValues.push(value);
+      setProgress(value);
+    });
+    let framesAtCommit = 0;
     const navigate = vi.fn<() => Promise<void>>(async () => {
       curtainAtCommit = curtainState();
-      sweepsAtCommit = fakeGlimm.playSweep.mock.calls.length;
+      framesAtCommit = progressValues.length;
       progressAtCommit = fakeGlimm.controller.getProgress();
       // Page B must not be on screen before the glimm effect has started.
       expect(pageMounted("b")).toBe(false);
@@ -47,9 +53,14 @@ describe("setupGlimmVanilla navigation timing", () => {
     await handle!.done;
 
     expect(navigate).toHaveBeenCalledWith("/b");
-    expect(sweepsAtCommit).toBe(1);
-    expect(progressAtCommit).toBe(1);
-    expect(fakeGlimm.playSweep).toHaveBeenCalledTimes(1);
+    expect(progressAtCommit).toBeCloseTo(0.56, 5);
+    // The band keeps moving after the commit, so it finishes over page B.
+    const afterCommit = progressValues
+      .slice(framesAtCommit)
+      .filter((value) => value > 0.56 && value < 1);
+    expect(afterCommit.length).toBeGreaterThan(0);
+    // Reveal mode is a single band, not glimm's double-play sweep.
+    expect(fakeGlimm.playSweep).not.toHaveBeenCalled();
     expect(curtainAtCommit).toBe("idle");
     expect(pageMounted("b")).toBe(true);
     expect(curtainState()).toBe("idle");
@@ -119,13 +130,16 @@ describe("setupGlimmVanilla navigation timing", () => {
     const { canvas } = mountPages();
     const api = setupGlimmVanilla({ canvas, navigate: async () => {} });
     let curtainAtCommit = "";
+    let progressAtCommit = 0;
     const handle = api.sweep(async () => {
       curtainAtCommit = curtainState();
+      progressAtCommit = fakeGlimm.controller.getProgress();
     });
 
     await handle!.done;
     expect(curtainAtCommit).toBe("idle");
-    expect(fakeGlimm.playSweep).toHaveBeenCalledTimes(1);
+    expect(progressAtCommit).toBeCloseTo(0.56, 5);
+    expect(fakeGlimm.playSweep).not.toHaveBeenCalled();
     api.destroy();
   });
 
