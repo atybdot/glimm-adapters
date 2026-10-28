@@ -3,8 +3,9 @@ import {
   demos,
   frameworks,
   frameworkHref,
-  SWEEP_MS,
+  siteHref,
 } from "@glimm-examples/shared/demo-data";
+import { highlight } from "@glimm-examples/shared/highlight";
 import { appHref } from "./base";
 
 const demo = demos.vanilla;
@@ -28,110 +29,107 @@ const copyIcon = `
 `;
 
 const chevron = `
-  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+  <svg class="picker-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="m3 4.5 3 3 3-3" />
   </svg>
 `;
 
+const arrowLeft = `
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M9 1.5 3.5 6 9 10.5" />
+  </svg>
+`;
+
+const arrowRight = `
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m6 1.5 4.5 4.5L6 10.5M1.5 6h9" />
+  </svg>
+`;
+
 const options = frameworks
   .map(
-    (framework) =>
-      `<option value="${frameworkHref(base, framework.id)}"${
-        framework.id === demo.id ? " selected" : ""
-      }>${framework.name}</option>`,
+    (framework) => `
+      <a class="picker-item" href="${frameworkHref(base, framework.id)}" data-glimm-skip${
+        framework.id === demo.id ? ' aria-current="page"' : ""
+      }>
+        <img src="${appHref(`/${framework.logo}`)}" alt="" width="17" height="17" />
+        ${framework.name}
+      </a>`,
   )
   .join("");
 
 const bar = `
   <header class="bar">
-    <a class="wordmark" href="${appHref("/")}" aria-label="glimm-adapters home">glimm-adapters</a>
-    <span class="slash" aria-hidden="true">/</span>
-    <label class="picker">
-      <span class="sr-only">Framework</span>
-      <select name="framework" data-framework>
-        ${options}
-      </select>
-      ${chevron}
-    </label>
+    <a class="wordmark" href="${siteHref(base)}" data-glimm-skip>glimm-adapters</a>
+    <details class="picker" data-picker>
+      <summary>
+        <img class="picker-mark" src="${logo}" alt="" width="17" height="17" />
+        <span>${demo.name}</span>
+        ${chevron}
+      </summary>
+      <div class="picker-menu">${options}</div>
+    </details>
   </header>
 `;
 
-type Page = "sweep" | "wiring" | "prompt";
-
-const switcher = (page: Page) => {
-  const tabs = [
-    { id: "sweep", label: "Sweep", href: appHref("/") },
-    { id: "wiring", label: "Wiring", href: appHref("/about") },
-    { id: "prompt", label: "Prompt", href: appHref("/prompt") },
-  ] as const;
-
-  return `
-  <nav class="switcher" aria-label="Demo pages">
-    ${tabs
-      .map((tab) =>
-        tab.id === page
-          ? `<span class="switch" aria-current="page">${tab.label}</span>`
-          : `<a class="switch" href="${tab.href}">${tab.label}</a>`,
-      )
-      .join("")}
-  </nav>
+const sheet = (id: "wiring" | "prompt", file: string, html: string, hidden: boolean) => `
+  <div class="sheet${id === "prompt" ? " sheet--prose" : ""}" data-panel="${id}" ${hidden ? "hidden" : ""}>
+    <p class="sheet-file">${file}</p>
+    <pre><code>${html}</code></pre>
+  </div>
 `;
-};
 
-const code = (text: string, label: string, prose = false) => `
-  <figure class="code${prose ? " code--prose" : ""}">
-    <figcaption class="code-head">
-      <span>${label}</span>
+const panel = `
+  <section class="panel" aria-label="Setup">
+    <div class="panel-head">
+      <div class="tabs" role="group" aria-label="Setup">
+        <button class="tab" type="button" aria-pressed="true" data-tab="wiring">Wiring</button>
+        <button class="tab" type="button" aria-pressed="false" data-tab="prompt">Agent prompt</button>
+      </div>
       <button type="button" class="copy" data-copy aria-label="Copy">
         ${copyIcon}
       </button>
-    </figcaption>
-    <pre><code>${escape(text)}</code></pre>
-  </figure>
+    </div>
+    ${sheet("wiring", demo.file, highlight(demo.code, demo.lang), false)}
+    ${sheet("prompt", "agent prompt", escape(agentPrompt(demo)), true)}
+  </section>
 `;
 
-const wiringCode = code(demo.code, demo.file);
-const promptCode = code(agentPrompt(demo), "agent prompt", true);
-
-const footer = (sweepMs: number) => `
-  <footer class="foot">
-    <label class="duration">
-      <span>duration</span>
-      <input
-        type="range"
-        min="${SWEEP_MS.min}"
-        max="${SWEEP_MS.max}"
-        step="${SWEEP_MS.step}"
-        value="${sweepMs}"
-      />
-      <output>${sweepMs} ms</output>
-    </label>
-  </footer>
+const home = `
+  <div class="home">
+    <section class="intro">
+      <img class="mark" src="${logo}" alt="" width="38" height="38" />
+      <h1>${demo.name}</h1>
+      <p class="line">${demo.line}</p>
+      <a class="next" href="${appHref("/about")}">
+        <span>Second page</span>${arrowRight}
+      </a>
+    </section>
+    ${panel}
+  </div>
 `;
 
-export function renderPage(path: string, sweepMs: number): string {
-  const page: Page = path === "/about" ? "wiring" : path === "/prompt" ? "prompt" : "sweep";
+const about = `
+  <section class="second">
+    <h1>Second page.</h1>
+    <p>Same canvas, same listener. The band covered once and left.</p>
+    <a class="next" href="${appHref("/")}">${arrowLeft}<span>Back to the demo</span></a>
+  </section>
+`;
+
+export function renderPage(path: string): string {
+  const isAbout = path === "/about";
 
   return `
     <div class="page" style="--accent: ${demo.accent}">
       <a class="skip" href="#main">Skip to content</a>
       ${bar}
-      <main class="stage" id="main">
-        <div class="fw-card">
-          <img src="${logo}" alt="" width="52" height="52" />
-          <h1>${demo.name}</h1>
-        </div>
-        ${switcher(page)}
-        ${
-          page === "wiring"
-            ? wiringCode
-            : page === "prompt"
-              ? promptCode
-              : `<p class="line">${demo.line}</p>`
-        }
+      <main class="main" id="main">
+        ${isAbout ? about : home}
       </main>
-      ${footer(sweepMs)}
     </div>
   `;
 }
