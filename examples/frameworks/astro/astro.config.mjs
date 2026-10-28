@@ -5,6 +5,7 @@ import { defineConfig } from "astro/config";
 const isBuild = process.argv.includes("build");
 
 export default defineConfig({
+  publicDir: "../shared/public",
   base: isBuild ? "/example/astro" : "/",
   server: { port: 4606 },
   vite: { server: { strictPort: true } },
