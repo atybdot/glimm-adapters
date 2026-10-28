@@ -14,6 +14,11 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: false,
+  // One self-contained bundle per entry. Code splitting put the vanilla runner
+  // and the curtain/reveal helpers in one shared chunk, so `index`, `svelte`,
+  // `vue` and `astro` all loaded code they never called.
+  splitting: false,
+  minify: true,
   external: [
     "glimm",
     "react",

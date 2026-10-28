@@ -242,6 +242,8 @@ examples/native-css/  a JavaScript-free cross-document version
 
 The package is built with tsup. `index`, `react`, `tanstack`, `svelte`, `vue`, `astro` and `vanilla` are the public entries; `intercept.ts`, `covered.ts`, `vanilla.ts` and `setup-key.ts` are internal modules. Router libraries are optional peer dependencies.
 
+Each entry is bundled and minified on its own, so importing one adapter never pulls another adapter's code. The package is also marked `sideEffects: false`, which lets a bundler drop re-exports the app does not use.
+
 ## Framework playground
 
 `examples/frameworks` has one small app per adapter, all rendering the same two pages:
