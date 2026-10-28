@@ -147,8 +147,50 @@ body {
   white-space: nowrap;
 }
 
-.wordmark:hover {
-  opacity: 0.75;
+/* The same band the docs site clips to its wordmark. The gradient is always
+   applied, and the sweep is a one-shot animation on enter, so a second hover
+   replays it. Kept outside the masthead block on purpose: `background` is set
+   here, and no later rule should repaint the glyphs solid. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .wordmark {
+    --glimpse-a: #ffbc01;
+    --glimpse-b: #ff8c1b;
+    --glimpse-c: #ff3d4c;
+    background-image: linear-gradient(
+      100deg,
+      var(--ink) 0%,
+      var(--ink) 38%,
+      var(--glimpse-a) 46%,
+      var(--glimpse-b) 52%,
+      var(--glimpse-c) 58%,
+      var(--ink) 66%,
+      var(--ink) 100%
+    );
+    background-position: 100% 50%;
+    background-repeat: no-repeat;
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .wordmark:hover,
+  .wordmark:focus-visible {
+    /* 160ms lets a cursor that only crosses the word leave first, matching the
+       docs site. */
+    animation: wordmark-sweep 1900ms cubic-bezier(0.32, 0.72, 0, 1) 160ms;
+  }
+}
+
+@keyframes wordmark-sweep {
+  from {
+    background-position: 100% 50%;
+  }
+
+  to {
+    background-position: 0% 50%;
+  }
 }
 
 .picker {
@@ -601,5 +643,10 @@ code {
   .copy,
   .skip {
     transition: none;
+  }
+
+  .wordmark:hover,
+  .wordmark:focus-visible {
+    animation: none;
   }
 }
