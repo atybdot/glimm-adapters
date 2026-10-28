@@ -1,7 +1,9 @@
 import "@glimm-examples/shared/demo.css";
+import { accentChain } from "glimm-adapters";
 import { setupGlimmVanilla } from "glimm-adapters/vanilla";
-import { SWEEP_MS } from "@glimm-examples/shared/demo-data";
+import { demos, SWEEP_MS } from "@glimm-examples/shared/demo-data";
 import { flashCopy } from "@glimm-examples/shared/copy";
+import { initPicker } from "@glimm-examples/shared/picker";
 import { toAppPath } from "./base";
 import { renderPage } from "./render";
 
@@ -12,14 +14,17 @@ if (!app || !canvas) {
   throw new Error("The vanilla demo is missing #app or #glimm");
 }
 
-const defaults = { sweepMs: SWEEP_MS.initial };
-let sweepMs = defaults.sweepMs;
+const defaults = {
+  sweepMs: SWEEP_MS,
+  palette: accentChain(demos.vanilla.palette),
+};
 
 const paint = () => {
-  app.innerHTML = renderPage(toAppPath(window.location.pathname), sweepMs);
+  app.innerHTML = renderPage(toAppPath(window.location.pathname));
 };
 
 paint();
+initPicker();
 
 const glimm = setupGlimmVanilla({
   canvas,
@@ -32,31 +37,29 @@ const glimm = setupGlimmVanilla({
   },
 });
 
-// The page is re-rendered on every navigation, so read the live slider value
-// off the event and keep the defaults object in sync for the next sweep.
-app.addEventListener("input", (event) => {
-  const input = event.target;
-  if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
-
-  sweepMs = Number(input.value);
-  defaults.sweepMs = sweepMs;
-
-  const output = input.closest(".duration")?.querySelector("output");
-  if (output) output.textContent = `${sweepMs} ms`;
-});
-
-app.addEventListener("change", (event) => {
-  const select = event.target;
-  if (select instanceof HTMLSelectElement && select.matches("[data-framework]")) {
-    window.location.assign(select.value);
-  }
-});
-
 app.addEventListener("click", (event) => {
   const target = event.target;
-  const button = target instanceof Element ? target.closest("[data-copy]") : null;
+  if (!(target instanceof Element)) return;
+
+  const tab = target.closest("[data-tab]");
+  if (tab instanceof HTMLButtonElement) {
+    const panel = tab.closest(".panel");
+    if (!panel) return;
+    const id = tab.dataset.tab;
+    for (const button of panel.querySelectorAll("[data-tab]")) {
+      button.setAttribute("aria-pressed", String(button === tab));
+    }
+    for (const sheet of panel.querySelectorAll<HTMLElement>("[data-panel]")) {
+      sheet.hidden = sheet.dataset.panel !== id;
+    }
+    return;
+  }
+
+  const button = target.closest("[data-copy]");
   if (!(button instanceof HTMLButtonElement)) return;
-  const text = button.closest(".code")?.querySelector("code")?.textContent;
+  const text = button
+    .closest(".panel")
+    ?.querySelector("[data-panel]:not([hidden]) code")?.textContent;
   if (text) void flashCopy(button, text);
 });
 
